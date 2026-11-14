@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -100,7 +101,8 @@ fun BarChart(
                     if (index < tickFlags.size && tickFlags[index]) {
                         Text(
                             if (index < ticks.size) ticks[index] else "",
-                            fontSize = 10.sp,
+                            fontSize = 10.sp, maxLines = 1, softWrap = false,
+                            modifier = Modifier.requiredWidth(28.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                             color = AppColors.Muted
                         )
                     }

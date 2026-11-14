@@ -158,7 +158,10 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
         note: String
     ) {
         viewModelScope.launch {
-            events.send(repo.addEntry(counterId, delta, TimeUtils.toEpoch(date, hour, minute), note))
+            val now = System.currentTimeMillis()
+            val parts = TimeUtils.dateTimeParts(now)
+            val at = if (date == TimeUtils.today() && parts.first == hour && parts.second == minute) now else TimeUtils.toEpoch(date, hour, minute)
+            events.send(repo.addEntry(counterId, delta, at, note))
             feedback()
             WidgetUpdater.updateAll(getApplication<Application>())
         }
@@ -178,7 +181,7 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
                 entry.copy(
                     delta = delta,
                     localDate = TimeUtils.ymd(date),
-                    occurredAt = TimeUtils.toEpoch(date, hour, minute),
+                    occurredAt = TimeUtils.toEpoch(date, hour, minute) + Math.floorMod(entry.occurredAt, 60_000L),
                     note = note
                 )
             )

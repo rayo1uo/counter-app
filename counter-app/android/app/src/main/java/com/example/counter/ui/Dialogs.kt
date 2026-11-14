@@ -73,7 +73,7 @@ private fun FormField(
         label = { Text(label, fontSize = 12.sp) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(
-            keyboardType = if (numeric) KeyboardType.Decimal else KeyboardType.Text
+            keyboardType = if (numeric) KeyboardType.Ascii else KeyboardType.Text
         ),
         modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp)
     )
@@ -205,7 +205,7 @@ fun QuickLogDialog(
         onDismissRequest = onDismiss,
         title = { Text("记录 · ${counter.name}") },
         text = {
-            Column {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
                 FormField("本次增量（可填负数）", delta, { delta = it }, true)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("日期", fontSize = 13.sp, color = AppColors.Muted)
@@ -255,7 +255,7 @@ fun EntryEditorDialog(
         onDismissRequest = onDismiss,
         title = { Text("编辑记录 · $counterName") },
         text = {
-            Column {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
                 FormField("增量", delta, { delta = it }, true)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     TextButton(onClick = { pickDate(context, date) { date = it } }) {
