@@ -59,6 +59,7 @@ fun chipColor(dark: Boolean): Color = if (dark) AppColors.ChipDark else AppColor
 fun lineColor(dark: Boolean): Color = if (dark) AppColors.LineDark else AppColors.LineLight
 
 private val LightScheme = lightColorScheme(
+    inversePrimary = Color(0xFFFFB85C),
     primary = AppColors.OrangeDark,
     onPrimary = Color.White,
     primaryContainer = AppColors.OrangeSoft,
@@ -76,6 +77,7 @@ private val LightScheme = lightColorScheme(
 )
 
 private val DarkScheme = darkColorScheme(
+    inversePrimary = AppColors.OrangeDark,
     primary = Color(0xFFFFB85C),
     onPrimary = Color(0xFF482800),
     primaryContainer = Color(0xFF583B1E),

@@ -197,7 +197,8 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun saveCounter(counter: CounterEntity) {
-        viewModelScope.launch { repo.upsertCounter(counter) }
+        val saved = if (_ui.value.counters.none { it.id == counter.id }) counter.copy(sortOrder = (_ui.value.counters.maxOfOrNull { it.sortOrder } ?: -1) + 1) else counter
+        viewModelScope.launch { repo.upsertCounter(saved) }
     }
 
     fun deleteCounter(id: String) {

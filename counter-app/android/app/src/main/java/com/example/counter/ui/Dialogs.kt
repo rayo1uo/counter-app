@@ -367,7 +367,7 @@ fun SettingsDialog(
                         onCheckedChange = { vm.setVolume(it, volumeTarget) }
                     )
                 }
-                Text("绑定：$volumeName（按音量上键即可 +1，不调节系统音量）", fontSize = 11.sp, color = AppColors.Muted)
+                Text("绑定：$volumeName（按音量上键按设定增量计数）", fontSize = 11.sp, color = AppColors.Muted)
                 SettingRow("导出 CSV 流水") { TextButton(onClick = onExportCsv) { Text("导出") } }
                 SettingRow("导出每日汇总 CSV") { TextButton(onClick = onExportDailyCsv) { Text("导出") } }
                 Text("每次修改后自动保存本地备份；导出 JSON 可另存到其他设备。", fontSize = 11.sp, color = AppColors.Muted)
