@@ -21,7 +21,7 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,12 +44,13 @@ fun HistoryScreen(
     val names = ui.counters.associateBy { it.id }
     val ids = vm.visibleCounters().map { it.id }.toSet()
     val entries = ui.entries.filter { entry ->
-        entry.counterId in ids &&
+        entry.counterId in ids && (ui.rangeStart == null || entry.localDate >= ui.rangeStart) && (ui.rangeEnd == null || entry.localDate <= ui.rangeEnd) &&
             (ui.search.isBlank() || (names[entry.counterId]?.name ?: "").contains(ui.search, ignoreCase = true))
     }.sortedWith(
         compareByDescending<EntryEntity> { it.occurredAt }
             .thenByDescending { it.createdAt }
     )
+    var collapsed by remember { mutableStateOf(setOf<String>()) }
     val groups = entries.groupBy { it.localDate }.toList().sortedByDescending { it.first }
     val filterLabel = if (ui.filterCategory == "all") "全部" else ui.filterCategory
 
@@ -79,6 +80,7 @@ fun HistoryScreen(
             }
         )
 
+        RecordFilters(vm, ui)
         Spacer(modifier = Modifier.height(14.dp))
 
         if (groups.isEmpty()) {
@@ -93,7 +95,7 @@ fun HistoryScreen(
         groups.forEach { (date, list) ->
             val localDate = TimeUtils.parse(date)
             val weekLabels = arrayOf("日", "一", "二", "三", "四", "五", "六")
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(modifier = Modifier.fillMaxWidth().clickable { collapsed = if (date in collapsed) collapsed - date else collapsed + date }, verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
                         .width(42.dp)
@@ -114,7 +116,7 @@ fun HistoryScreen(
                 }
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
-                    "周${weekLabels[localDate.dayOfWeek.value % 7]}",
+                    "周${weekLabels[localDate.dayOfWeek.value % 7]} · ${list.size} 条记录  ${if (date in collapsed) "展开" else "收起"}",
                     fontSize = 14.sp,
                     color = AppColors.Muted
                 )
@@ -122,7 +124,7 @@ fun HistoryScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            list.forEachIndexed { index, entry ->
+            if (date !in collapsed) list.forEachIndexed { index, entry ->
                 val (hour24, minute) = TimeUtils.dateTimeParts(entry.occurredAt)
                 val ampm = if (hour24 < 12) "上午" else "下午"
                 val hour12 = if (hour24 % 12 == 0) 12 else hour24 % 12
@@ -140,14 +142,15 @@ fun HistoryScreen(
                                 "${gapMinutes / 60}时" + if (gapMinutes % 60 > 0) "${gapMinutes % 60}分" else ""
                             } else "${gapMinutes}分"
                             Text(gapText, fontSize = 10.sp, color = AppColors.Muted)
-                            Spacer(modifier = Modifier.height(14.dp))
+                            RecordFilters(vm, ui)
+        Spacer(modifier = Modifier.height(14.dp))
                         }
                         Text(
-                            "$hour12:${String.format("%02d", minute)}",
+                            String.format("%02d:%02d", hour24, minute),
                             fontSize = 11.sp,
                             color = AppColors.Muted
                         )
-                        Text(ampm, fontSize = 11.sp, color = AppColors.Muted)
+
                     }
 
                     Box(
@@ -177,7 +180,7 @@ fun HistoryScreen(
                             .clickable { onEditEntry(entry) }
                             .padding(14.dp)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(modifier = Modifier.fillMaxWidth().clickable { collapsed = if (date in collapsed) collapsed - date else collapsed + date }, verticalAlignment = Alignment.CenterVertically) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     names[entry.counterId]?.name ?: "已删除",
@@ -199,7 +202,7 @@ fun HistoryScreen(
                                     (if (entry.delta > 0) "+" else "") + formatNumber(entry.delta),
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = AppColors.OrangeDark
+                                    color = if (entry.delta < 0) AppColors.Danger else AppColors.OrangeDark
                                 )
                             }
                             Spacer(modifier = Modifier.width(10.dp))

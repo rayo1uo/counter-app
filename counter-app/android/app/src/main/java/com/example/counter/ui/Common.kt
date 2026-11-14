@@ -3,6 +3,9 @@ package com.example.counter.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -63,9 +66,8 @@ fun homeSummaryText(ui: UiState, counters: List<CounterEntity>): String {
     }
     val total = scoped.sumOf { it.delta } +
         if (mode == CountMode.TOTAL) counters.sumOf { it.initialValue } else 0.0
-    val average = if (counters.isEmpty()) 0.0 else total / counters.size
-    val label = if (mode == CountMode.TOTAL) "累计" else "总计"
-    return "$label：${formatNumber(total)}，项均：${formatNumber(average)}"
+    val label = if (mode == CountMode.TOTAL) "截至所选日期累计" else if (ui.selectedDate == TimeUtils.todayYmd()) "今日净增量" else "所选日期净增量"
+    return "$label  ${formatNumber(total)}  ·  ${counters.size} 个计数器"
 }
 
 @Composable
@@ -76,7 +78,7 @@ fun CircleButton(
 ) {
     Box(
         modifier = modifier
-            .size(38.dp)
+            .size(48.dp)
             .clip(CircleShape)
             .background(MaterialTheme.colorScheme.surface)
             .clickable(onClick = onClick),
@@ -178,81 +180,53 @@ fun WeekStrip(
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun CounterCard(
-    counter: CounterEntity,
-    value: Double,
-    subtitle: String,
-    onMinus: () -> Unit,
-    onPlus: () -> Unit,
-    onOpen: () -> Unit,
-    onEdit: () -> Unit
+    counter: CounterEntity, value: Double, subtitle: String,
+    onMinus: () -> Unit, onPlus: () -> Unit, onOpen: () -> Unit, onEdit: () -> Unit,
+    dark: Boolean = false, compact: Boolean = true, cumulative: Double = value,
+    onBatch: () -> Unit = onOpen, onPin: () -> Unit = {}, onMove: (Int) -> Unit = {}
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(118.dp)
-            .padding(bottom = 10.dp)
-            .clip(RoundedCornerShape(22.dp))
-            .background(Color(counter.color.toInt()))
-            .clickable(onClick = onOpen)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier.size(52.dp).clip(CircleShape).clickable(onClick = onMinus),
-                contentAlignment = Alignment.Center
-            ) { Text("−", fontSize = 30.sp, color = Color.White) }
-            Column(
-                modifier = Modifier.weight(1f),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    if (counter.icon.isBlank()) counter.name else "${counter.icon} ${counter.name}",
-                    fontSize = 14.sp,
-                    color = Color.White.copy(alpha = 0.95f)
-                )
-                Text(formatNumber(value), fontSize = 40.sp, color = Color.White)
-                Text(subtitle, fontSize = 11.sp, color = Color.White.copy(alpha = 0.82f))
-                if (counter.target > 0.0) {
-                    val progress = (value / counter.target).coerceIn(0.0, 1.0).toFloat()
-                    Box(
-                        modifier = Modifier
-                            .padding(top = 8.dp)
-                            .fillMaxWidth(0.7f)
-                            .height(4.dp)
-                            .clip(RoundedCornerShape(3.dp))
-                            .background(Color.White.copy(alpha = 0.28f))
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth(progress)
-                                .fillMaxHeight()
-                                .clip(RoundedCornerShape(3.dp))
-                                .background(Color.White)
-                        )
+    var menu by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    val accent = Color(counter.color.toInt())
+    Row(Modifier.fillMaxWidth().padding(bottom = 12.dp).clip(RoundedCornerShape(20.dp))
+        .background(cardBackground(dark)).height(if (compact) 112.dp else 174.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.width(5.dp).fillMaxHeight().background(accent))
+        Column(Modifier.weight(1f).clickable(onClick = onOpen).padding(start = 16.dp, end = 6.dp)) {
+            Text((if (counter.pinned) "置顶 · " else "") + counter.icon + " " + counter.name,
+                fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = textColor(dark), maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            Text(formatNumber(value), fontSize = if (compact) 30.sp else 48.sp,
+                fontWeight = FontWeight.Bold, color = textColor(dark), maxLines = 1)
+            Text("累计 ${formatNumber(cumulative)} · $subtitle", fontSize = 11.sp, color = AppColors.Muted, maxLines = 1)
+            if (counter.target > 0) {
+                androidx.compose.material3.LinearProgressIndicator(progress = (value / counter.target).coerceIn(0.0, 1.0).toFloat(),
+                    modifier = Modifier.padding(top = 5.dp).fillMaxWidth().height(3.dp), color = accent)
+            }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(48.dp).clip(CircleShape).background(chipColor(dark)).clickable(onClick = onMinus), contentAlignment = Alignment.Center) {
+                Text("−", fontSize = 26.sp, color = textColor(dark))
+            }
+            Spacer(Modifier.width(8.dp))
+            Box(Modifier.size(48.dp).clip(CircleShape).background(accent)
+                .combinedClickable(onClick = onPlus, onLongClick = onBatch), contentAlignment = Alignment.Center) {
+                Text("+", fontSize = 28.sp, color = Color.White)
+            }
+            Box {
+                androidx.compose.material3.IconButton(onClick = { menu = true }, modifier = Modifier.width(40.dp)) {
+                    Text("⋮", fontSize = 24.sp, color = AppColors.Muted)
+                }
+                androidx.compose.material3.DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    listOf("编辑计数器" to onEdit, "批量 / 补录" to onBatch,
+                        (if (counter.pinned) "取消置顶" else "置顶") to onPin,
+                        "上移" to { onMove(-1) }, "下移" to { onMove(1) }).forEach { (label, action) ->
+                        androidx.compose.material3.DropdownMenuItem(text = { Text(label) }, onClick = { menu = false; action() })
                     }
                 }
             }
-            Box(
-                modifier = Modifier.size(52.dp).clip(CircleShape).clickable(onClick = onPlus),
-                contentAlignment = Alignment.Center
-            ) { Text("+", fontSize = 30.sp, color = Color.White) }
-        }
-        // Discoverable entry point for editing / deleting this counter.
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 7.dp, end = 9.dp)
-                .size(30.dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.24f))
-                .clickable(onClick = onEdit),
-            contentAlignment = Alignment.Center
-        ) {
-            Text("✎", fontSize = 15.sp, color = Color.White)
         }
     }
 }
@@ -335,13 +309,13 @@ private fun RowScope.TabItem(
             Icon(
                 icon,
                 contentDescription = label,
-                tint = if (selected) AppColors.Blue else AppColors.Muted,
+                tint = if (selected) AppColors.OrangeDark else AppColors.Muted,
                 modifier = Modifier.size(20.dp)
             )
             Text(
                 label,
                 fontSize = 10.sp,
-                color = if (selected) AppColors.Blue else AppColors.Muted
+                color = if (selected) AppColors.OrangeDark else AppColors.Muted
             )
         }
     }

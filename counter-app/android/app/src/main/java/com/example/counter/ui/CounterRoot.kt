@@ -1,6 +1,7 @@
 package com.example.counter.ui
 
 import android.widget.Toast
+import kotlinx.coroutines.launch
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -50,6 +51,17 @@ fun CounterRoot(vm: CounterViewModel) {
     val dark = ui.settings.darkTheme
     val context = LocalContext.current
     var dialog by remember { mutableStateOf<ScreenDialog>(ScreenDialog.None) }
+    var dailyCsv by remember { mutableStateOf(false) }
+    val snackbar = remember { androidx.compose.material3.SnackbarHostState() }
+    androidx.compose.runtime.LaunchedEffect(vm) {
+        for (entry in vm.events) {
+            snackbar.currentSnackbarData?.dismiss()
+            launch {
+                val name = vm.ui.value.counters.firstOrNull { it.id == entry.counterId }?.name ?: "计数"
+                if (snackbar.showSnackbar("已记录：$name ${if (entry.delta > 0) "+" else ""}${formatNumber(entry.delta)}", "撤销", duration = androidx.compose.material3.SnackbarDuration.Short) == androidx.compose.material3.SnackbarResult.ActionPerformed) vm.undoEntry(entry)
+            }
+        }
+    }
     val close: () -> Unit = { dialog = ScreenDialog.None }
 
     val csvLauncher = rememberLauncherForActivityResult(
@@ -58,7 +70,7 @@ fun CounterRoot(vm: CounterViewModel) {
         if (uri != null) {
             try {
                 context.contentResolver.openOutputStream(uri)?.use { stream ->
-                    stream.write(vm.exportCsv().toByteArray(StandardCharsets.UTF_8))
+                    stream.write((if (dailyCsv) vm.exportDailyCsv() else vm.exportCsv()).toByteArray(StandardCharsets.UTF_8))
                 }
                 Toast.makeText(context, "CSV 已导出", Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
@@ -89,10 +101,8 @@ fun CounterRoot(vm: CounterViewModel) {
             try {
                 val text = context.contentResolver.openInputStream(uri)?.bufferedReader()
                     ?.use { reader -> reader.readText() }
-                if (text != null && vm.importJson(text)) {
-                    Toast.makeText(context, "备份已恢复", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(context, "文件格式不正确", Toast.LENGTH_SHORT).show()
+                if (text != null) vm.importJson(text) { success ->
+                    Toast.makeText(context, if (success) "备份已恢复" else "文件格式不正确，原数据已保留", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 Toast.makeText(context, "导入失败：${e.message}", Toast.LENGTH_SHORT).show()
@@ -100,7 +110,8 @@ fun CounterRoot(vm: CounterViewModel) {
         }
     }
 
-    val exportCsv = { csvLauncher.launch("counter_${TimeUtils.todayYmd()}.csv") }
+    val exportCsv = { dailyCsv = false; csvLauncher.launch("counter_${TimeUtils.todayYmd()}.csv") }
+    val exportDailyCsv = { dailyCsv = true; csvLauncher.launch("counter_daily_${TimeUtils.todayYmd()}.csv") }
     val exportJson = { jsonLauncher.launch("counter_backup_${TimeUtils.todayYmd()}.json") }
     val importJson = { importLauncher.launch(arrayOf("application/json", "text/plain", "*/*")) }
 
@@ -148,12 +159,12 @@ fun CounterRoot(vm: CounterViewModel) {
             FloatingActionButton(
                 onClick = { dialog = ScreenDialog.AddCounter },
                 shape = CircleShape,
-                containerColor = cardBackground(dark),
+                containerColor = AppColors.Orange,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(end = 22.dp, bottom = if (wide) 22.dp else 104.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = "新增计数器", tint = textColor(dark))
+                Icon(Icons.Default.Add, contentDescription = "新增计数器", tint = androidx.compose.ui.graphics.Color.White)
             }
         }
 
@@ -161,7 +172,7 @@ fun CounterRoot(vm: CounterViewModel) {
         // summary there instead of letting the scrollable card list push it off-screen.
         if (ui.tab == Tab.HOME && wide) {
             Text(
-                homeSummaryText(ui, vm.visibleCounters()) + "   ·   点卡片 ✎ 编辑/删除",
+                homeSummaryText(ui, vm.visibleCounters()),
                 fontSize = 12.sp,
                 color = AppColors.Muted,
                 modifier = Modifier
@@ -170,6 +181,7 @@ fun CounterRoot(vm: CounterViewModel) {
             )
         }
 
+        androidx.compose.material3.SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(bottom = 94.dp))
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -258,6 +270,7 @@ fun CounterRoot(vm: CounterViewModel) {
             ui = ui,
             onDismiss = close,
             onExportCsv = exportCsv,
+            onExportDailyCsv = exportDailyCsv,
             onExportJson = exportJson,
             onImportJson = importJson,
             onClearAll = { dialog = ScreenDialog.ConfirmClear }

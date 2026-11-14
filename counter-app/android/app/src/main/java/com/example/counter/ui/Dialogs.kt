@@ -3,6 +3,7 @@ package com.example.counter.ui
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.content.Context
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -72,7 +73,7 @@ private fun FormField(
         label = { Text(label, fontSize = 12.sp) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(
-            keyboardType = if (numeric) KeyboardType.Number else KeyboardType.Text
+            keyboardType = if (numeric) KeyboardType.Decimal else KeyboardType.Text
         ),
         modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp)
     )
@@ -94,6 +95,7 @@ fun CounterEditorDialog(
     var target by remember { mutableStateOf(formatNumber(counter?.target ?: 0.0)) }
     var category by remember { mutableStateOf(counter?.category ?: (categories.firstOrNull()?.name ?: "默认")) }
     var color by remember { mutableStateOf(counter?.color ?: 0xFFF5921E) }
+    var advanced by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf("") }
 
     AlertDialog(
@@ -103,12 +105,20 @@ fun CounterEditorDialog(
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 FormField("名称", name, { name = it })
                 FormField("图标（可选 emoji）", icon, { icon = it })
+                TextButton(onClick = { advanced = !advanced }) { Text(if (advanced) "收起高级设置" else "高级设置 · 增量 / 初始值 / 目标") }
+                if (advanced) {
                 Row {
                     Box(Modifier.weight(1f)) { FormField("每次增量", step, { step = it }, true) }
                     Spacer(Modifier.width(8.dp))
                     Box(Modifier.weight(1f)) { FormField("初始值", initial, { initial = it }, true) }
                 }
                 FormField("目标值（0 为不设）", target, { target = it }, true)
+                }
+                Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
+                    (categories.map { it.name } + "默认").distinct().forEach { label ->
+                        TextButton(onClick = { category = label }) { Text(label + if (category == label) " ✓" else "") }
+                    }
+                }
                 FormField("分类（可填新名称）", category, { category = it })
                 Text(
                     "已有分类：${categories.joinToString("、") { it.name }}",
@@ -143,6 +153,8 @@ fun CounterEditorDialog(
         confirmButton = {
             TextButton(onClick = {
                 if (name.isBlank()) { error = "请填写名称"; return@TextButton }
+                val numbers = listOf(step.toDoubleOrNull(), initial.toDoubleOrNull(), target.toDoubleOrNull())
+                if (numbers.any { it == null || !it.isFinite() } || numbers[0]!! <= 0 || numbers[2]!! < 0) { error = "请输入有效数字，增量须大于 0，目标不能为负数"; return@TextButton }
                 val result = CounterEntity(
                     id = counter?.id ?: UUID.randomUUID().toString(),
                     name = name.trim(),
@@ -151,7 +163,8 @@ fun CounterEditorDialog(
                     step = step.toDoubleOrNull() ?: 1.0,
                     initialValue = initial.toDoubleOrNull() ?: 0.0,
                     target = target.toDoubleOrNull() ?: 0.0,
-                    category = category.ifBlank { "默认" },
+                    category = category.trim().ifBlank { "默认" },
+                    pinned = counter?.pinned ?: false,
                     sortOrder = counter?.sortOrder ?: 0,
                     archived = counter?.archived ?: false,
                     createdAt = counter?.createdAt ?: System.currentTimeMillis()
@@ -212,7 +225,7 @@ fun QuickLogDialog(
         confirmButton = {
             TextButton(onClick = {
                 val value = delta.toDoubleOrNull()
-                if (value == null || value == 0.0) { error = "增量不能为 0"; return@TextButton }
+                if (value == null || !value.isFinite() || value == 0.0) { error = "增量不能为 0"; return@TextButton }
                 onSave(value, date, hour, minute, note.trim())
             }) { Text("记录") }
         },
@@ -259,7 +272,7 @@ fun EntryEditorDialog(
         confirmButton = {
             TextButton(onClick = {
                 val value = delta.toDoubleOrNull()
-                if (value == null || value == 0.0) { error = "增量不能为 0"; return@TextButton }
+                if (value == null || !value.isFinite() || value == 0.0) { error = "增量不能为 0"; return@TextButton }
                 onSave(value, date, hour, minute, note.trim())
             }) { Text("保存修改") }
         },
@@ -290,6 +303,7 @@ fun SettingsDialog(
     ui: UiState,
     onDismiss: () -> Unit,
     onExportCsv: () -> Unit,
+    onExportDailyCsv: () -> Unit,
     onExportJson: () -> Unit,
     onImportJson: () -> Unit,
     onClearAll: () -> Unit
@@ -304,6 +318,8 @@ fun SettingsDialog(
         title = { Text("设置") },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                SettingRow("紧凑卡片") { Switch(settings.compact, vm::setCompact) }
+                SettingRow("每次弹窗确认") { Switch(settings.confirmCount, vm::setConfirmCount) }
                 SettingRow("深色模式") {
                     Switch(checked = settings.darkTheme, onCheckedChange = vm::setDark)
                 }
@@ -353,6 +369,9 @@ fun SettingsDialog(
                 }
                 Text("绑定：$volumeName（按音量上键即可 +1，不调节系统音量）", fontSize = 11.sp, color = AppColors.Muted)
                 SettingRow("导出 CSV 流水") { TextButton(onClick = onExportCsv) { Text("导出") } }
+                SettingRow("导出每日汇总 CSV") { TextButton(onClick = onExportDailyCsv) { Text("导出") } }
+                Text("每次修改后自动保存本地备份；导出 JSON 可另存到其他设备。", fontSize = 11.sp, color = AppColors.Muted)
+                SettingRow("恢复自动备份") { TextButton(onClick = { vm.restoreAutomatic { ok -> android.widget.Toast.makeText(context, if (ok) "已恢复自动备份" else "暂无可恢复的自动备份", android.widget.Toast.LENGTH_SHORT).show() } }) { Text("恢复") } }
                 SettingRow("备份 JSON") { TextButton(onClick = onExportJson) { Text("备份") } }
                 SettingRow("导入备份") { TextButton(onClick = onImportJson) { Text("导入") } }
                 SettingRow("清空所有数据") {

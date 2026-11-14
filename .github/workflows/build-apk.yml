@@ -2,7 +2,8 @@ name: Build Android debug APK
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, "feat/**" ]
+  pull_request:
   workflow_dispatch:
 
 jobs:
@@ -64,7 +65,7 @@ jobs:
         run: |
           set -o pipefail
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace --no-daemon 2>&1 | tee -a build.log
+          ./gradlew assembleDebug assembleDebugAndroidTest lintDebug --stacktrace --no-daemon 2>&1 | tee -a build.log
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
@@ -72,6 +73,12 @@ jobs:
           name: counter-debug-apk
           path: counter-app/android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+
+      - name: Upload test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: counter-test-apk
+          path: counter-app/android/app/build/outputs/apk/androidTest/debug/*.apk
 
       - name: Upload build log
         if: always()

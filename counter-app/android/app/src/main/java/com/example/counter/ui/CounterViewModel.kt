@@ -41,7 +41,10 @@ data class UiState(
     val dim: Dim = Dim.MONTH,
     val view: StatView = StatView.CHART,
     val filterCategory: String = "all",
-    val search: String = ""
+    val search: String = "",
+    val counterFilter: String? = null,
+    val rangeStart: String? = null,
+    val rangeEnd: String? = null
 )
 
 class CounterViewModel(app: Application) : AndroidViewModel(app) {
@@ -55,7 +58,6 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
     val ui: StateFlow<UiState> = _ui
 
     init {
-        viewModelScope.launch { repo.seedIfEmpty() }
         viewModelScope.launch {
             dao.observeCounters().collect { value -> _ui.value = _ui.value.copy(counters = value) }
         }
@@ -83,6 +85,24 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
     fun setDim(dim: Dim) = update { it.copy(dim = dim) }
     fun setView(view: StatView) = update { it.copy(view = view) }
     fun setFilter(filter: String) = update { it.copy(filterCategory = filter) }
+    fun setCounterFilter(id: String?) = update { it.copy(counterFilter = id) }
+    fun setRange(start: String?, end: String?) = update { it.copy(rangeStart = start, rangeEnd = end) }
+    fun setCompact(value: Boolean) = viewModelScope.launch { settingsRepo.setCompact(value) }
+    fun setConfirmCount(value: Boolean) = viewModelScope.launch { settingsRepo.setConfirmCount(value) }
+    fun pin(counter: CounterEntity) = saveCounter(counter.copy(pinned = !counter.pinned))
+    fun move(counter: CounterEntity, direction: Int) {
+        val ordered = _ui.value.counters.filter { it.pinned == counter.pinned }.toMutableList()
+        val i = ordered.indexOfFirst { it.id == counter.id }
+        val j = i + direction
+        if (i < 0 || j !in ordered.indices) return
+        java.util.Collections.swap(ordered, i, j)
+        viewModelScope.launch { ordered.forEachIndexed { index, c -> repo.upsertCounter(c.copy(sortOrder = index)) } }
+    }
+    val events = kotlinx.coroutines.channels.Channel<com.example.counter.data.EntryEntity>(kotlinx.coroutines.channels.Channel.UNLIMITED)
+    fun undoEntry(entry: EntryEntity) = viewModelScope.launch { repo.deleteEntry(entry) }
+    fun restoreAutomatic(onResult: (Boolean) -> Unit) = viewModelScope.launch {
+        onResult(runCatching { repo.restoreAutomatic() }.getOrDefault(false))
+    }
     fun setSearch(text: String) = update { it.copy(search = text) }
 
     fun shiftPeriod(direction: Int) {
@@ -99,6 +119,7 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
     fun visibleCounters(): List<CounterEntity> {
         val state = _ui.value
         return state.counters.filter { counter ->
+            (state.counterFilter == null || counter.id == state.counterFilter) &&
             (state.filterCategory == "all" || counter.category == state.filterCategory) &&
                 (state.search.isBlank() || counter.name.contains(state.search, ignoreCase = true))
         }
@@ -110,7 +131,8 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
         val date = TimeUtils.parse(_ui.value.selectedDate)
         val now = java.time.LocalTime.now()
         viewModelScope.launch {
-            repo.addEntry(counterId, delta, TimeUtils.toEpoch(date, now.hour, now.minute))
+            val at = if (date == TimeUtils.today()) System.currentTimeMillis() else TimeUtils.toEpoch(date, now.hour, now.minute)
+            events.send(repo.addEntry(counterId, delta, at))
             feedback()
         }
     }
@@ -124,7 +146,7 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
         note: String
     ) {
         viewModelScope.launch {
-            repo.addEntry(counterId, delta, TimeUtils.toEpoch(date, hour, minute), note)
+            events.send(repo.addEntry(counterId, delta, TimeUtils.toEpoch(date, hour, minute), note))
             feedback()
             WidgetUpdater.updateAll(getApplication<Application>())
         }
@@ -220,8 +242,9 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
         }
         if (settings.sound) {
             try {
-                ToneGenerator(AudioManager.STREAM_NOTIFICATION, 60)
-                    .startTone(ToneGenerator.TONE_PROP_BEEP, 70)
+                val tone = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 60)
+                tone.startTone(ToneGenerator.TONE_PROP_BEEP, 70)
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ tone.release() }, 150)
             } catch (ignored: Exception) {
             }
         }
@@ -254,102 +277,27 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
         return builder.toString()
     }
 
-    fun exportJson(): String {
-        val root = JSONObject()
-        val countersArray = JSONArray()
-        _ui.value.counters.forEach { c ->
-            countersArray.put(JSONObject().apply {
-                put("id", c.id); put("name", c.name); put("color", c.color)
-                put("icon", c.icon); put("step", c.step); put("initialValue", c.initialValue)
-                put("target", c.target); put("category", c.category)
-                put("sortOrder", c.sortOrder); put("archived", c.archived)
-                put("createdAt", c.createdAt)
-            })
-        }
-        val entriesArray = JSONArray()
-        _ui.value.entries.forEach { e ->
-            entriesArray.put(JSONObject().apply {
-                put("id", e.id); put("counterId", e.counterId); put("delta", e.delta)
-                put("valueAfter", e.valueAfter); put("occurredAt", e.occurredAt)
-                put("localDate", e.localDate); put("tzOffsetSeconds", e.tzOffsetSeconds)
-                put("note", e.note); put("createdAt", e.createdAt)
-            })
-        }
-        val categoriesArray = JSONArray()
-        _ui.value.categories.forEach { c ->
-            categoriesArray.put(JSONObject().apply {
-                put("name", c.name); put("sortOrder", c.sortOrder); put("color", c.color)
-            })
-        }
-        root.put("version", 1)
-        root.put("counters", countersArray)
-        root.put("entries", entriesArray)
-        root.put("categories", categoriesArray)
-        val settingsObject = JSONObject().apply {
-            put("darkTheme", _ui.value.settings.darkTheme)
-            put("sound", _ui.value.settings.sound)
-            put("haptic", _ui.value.settings.haptic)
-            put("weekStartMonday", _ui.value.settings.weekStartMonday)
-            put("countMode", _ui.value.settings.countMode.name)
-            put("reminderEnabled", _ui.value.settings.reminderEnabled)
-            put("reminderHour", _ui.value.settings.reminderHour)
-            put("reminderMinute", _ui.value.settings.reminderMinute)
-            put("volumeCountEnabled", _ui.value.settings.volumeCountEnabled)
-            put("volumeCounterId", _ui.value.settings.volumeCounterId)
-        }
-        root.put("settings", settingsObject)
-        return root.toString(2)
+    fun exportDailyCsv(): String {
+        val state = _ui.value
+        val counters = visibleCounters()
+        val ids = counters.map { it.id }.toSet()
+        val entries = state.entries.filter { it.counterId in ids &&
+            (state.rangeStart == null || it.localDate >= state.rangeStart) &&
+            (state.rangeEnd == null || it.localDate <= state.rangeEnd) }
+        return "\uFEFF" + (listOf("日期") + counters.map { it.name } + "当日净增量").joinToString(",") { csv(it) } + "\n" +
+            entries.groupBy { it.localDate }.toSortedMap().entries.joinToString("\n") { (date, rows) ->
+                (listOf(csv(date)) + counters.map { c -> formatNumber(rows.filter { it.counterId == c.id }.sumOf { it.delta }) } + formatNumber(rows.sumOf { it.delta })).joinToString(",")
+            }
     }
+    fun exportJson(): String = com.example.counter.data.BackupCodec.encode(_ui.value.counters, _ui.value.entries, _ui.value.categories)
 
-    fun importJson(text: String): Boolean {
-        return try {
-            val root = JSONObject(text)
-            val countersArray = root.optJSONArray("counters") ?: return false
-            val entriesArray = root.optJSONArray("entries") ?: JSONArray()
-            val categoriesArray = root.optJSONArray("categories") ?: JSONArray()
-
-            val counters = (0 until countersArray.length()).map { i ->
-                val o = countersArray.getJSONObject(i)
-                CounterEntity(
-                    id = o.optString("id", UUID.randomUUID().toString()),
-                    name = o.optString("name", "未命名"),
-                    color = o.optLong("color", 0xFFF5921E),
-                    icon = o.optString("icon", ""),
-                    step = o.optDouble("step", 1.0),
-                    initialValue = o.optDouble("initialValue", 0.0),
-                    target = o.optDouble("target", 0.0),
-                    category = o.optString("category", "默认"),
-                    sortOrder = o.optInt("sortOrder", 0),
-                    archived = o.optBoolean("archived", false),
-                    createdAt = o.optLong("createdAt", 0L)
-                )
+    fun importJson(text: String, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val result = runCatching {
+                val backup = com.example.counter.data.BackupCodec.decode(text)
+                repo.replaceAll(backup.counters, backup.entries, backup.categories)
             }
-            val entries = (0 until entriesArray.length()).map { i ->
-                val o = entriesArray.getJSONObject(i)
-                EntryEntity(
-                    id = o.optString("id", UUID.randomUUID().toString()),
-                    counterId = o.optString("counterId", ""),
-                    delta = o.optDouble("delta", 0.0),
-                    valueAfter = o.optDouble("valueAfter", 0.0),
-                    occurredAt = o.optLong("occurredAt", System.currentTimeMillis()),
-                    localDate = o.optString("localDate", TimeUtils.todayYmd()),
-                    tzOffsetSeconds = o.optInt("tzOffsetSeconds", 0),
-                    note = o.optString("note", ""),
-                    createdAt = o.optLong("createdAt", 0L)
-                )
-            }
-            val categories = (0 until categoriesArray.length()).map { i ->
-                val o = categoriesArray.getJSONObject(i)
-                CategoryEntity(
-                    name = o.optString("name", "默认"),
-                    sortOrder = o.optInt("sortOrder", 0),
-                    color = o.optLong("color", 0xFF9B9B9B)
-                )
-            }
-            viewModelScope.launch { repo.replaceAll(counters, entries, categories) }
-            true
-        } catch (e: Exception) {
-            false
+            onResult(result.isSuccess)
         }
     }
 }

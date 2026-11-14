@@ -39,5 +39,5 @@ class AppContainer(private val app: Application) {
     private val database = CounterDatabase.build(app)
     val dao = database.dao()
     val settings = SettingsRepository(app)
-    val repository = CounterRepository(dao, settings)
+    val repository = CounterRepository(dao, settings, database, app)
 }

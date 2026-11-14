@@ -69,7 +69,7 @@ fun HomeScreen(
                     Text("‹ $filterLabel", fontSize = 14.sp, color = textColor(dark))
                 }
             },
-            center = { },
+            center = { Text("计数", fontSize = 20.sp, color = textColor(dark)) },
             trailing = {
                 Row {
                     CircleButton(onClick = onOpenMore) {
@@ -127,6 +127,11 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(10.dp))
 
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(ui.selectedDate.replace("-", "."), fontSize = 20.sp, color = textColor(dark), modifier = Modifier.weight(1f))
+            androidx.compose.material3.TextButton(onClick = { vm.setDate(TimeUtils.todayYmd()) }) { Text("回到今天") }
+            androidx.compose.material3.TextButton(onClick = { vm.setCompact(!ui.settings.compact) }) { Text(if (ui.settings.compact) "大卡片" else "紧凑") }
+        }
         WeekStrip(
             selectedDate = ui.selectedDate,
             monday = ui.settings.weekStartMonday,
@@ -152,10 +157,13 @@ fun HomeScreen(
                 counter = counter,
                 value = value,
                 subtitle = subtitle,
-                onMinus = { vm.addCount(counter.id, -counter.step) },
-                onPlus = { vm.addCount(counter.id, counter.step) },
-                onOpen = { onQuickLog(counter) },
-                onEdit = { onEditCounter(counter) }
+                onMinus = { if (ui.settings.confirmCount) onQuickLog(counter.copy(step = -counter.step)) else vm.addCount(counter.id, -counter.step) },
+                onPlus = { if (ui.settings.confirmCount) onQuickLog(counter) else vm.addCount(counter.id, counter.step) },
+                onOpen = { vm.setCounterFilter(counter.id); vm.setTab(Tab.HISTORY) },
+                onEdit = { onEditCounter(counter) },
+                onBatch = { onQuickLog(counter) }, dark = dark, compact = ui.settings.compact,
+                cumulative = counter.initialValue + ui.entries.filter { it.counterId == counter.id && it.localDate <= ui.selectedDate }.sumOf { it.delta },
+                onPin = { vm.pin(counter) }, onMove = { vm.move(counter, it) }
             )
         }
 
@@ -177,7 +185,7 @@ fun HomeScreen(
                 modifier = Modifier.padding(top = 6.dp, start = 4.dp)
             )
             Text(
-                "点卡片可补录，点卡片右上角 ✎ 可编辑或删除",
+                "轻点 + 立即记录 · 长按 + 批量补录 · 点击数字查看历史",
                 fontSize = 11.sp,
                 color = AppColors.Muted,
                 modifier = Modifier.padding(top = 2.dp, start = 4.dp, bottom = 2.dp)

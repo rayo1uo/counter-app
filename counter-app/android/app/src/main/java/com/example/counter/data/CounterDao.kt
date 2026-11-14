@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface CounterDao {
 
-    @Query("SELECT * FROM counters WHERE archived = 0 ORDER BY sortOrder ASC, createdAt ASC")
+    @Query("SELECT * FROM counters WHERE archived = 0 ORDER BY pinned DESC, sortOrder ASC, createdAt ASC")
     fun observeCounters(): Flow<List<CounterEntity>>
 
     @Query("SELECT * FROM entries ORDER BY occurredAt DESC")
@@ -36,7 +36,7 @@ interface CounterDao {
     @Query("SELECT COUNT(*) FROM counters")
     suspend fun counterCount(): Int
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @androidx.room.Upsert
     suspend fun upsertCounter(counter: CounterEntity)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

@@ -1,6 +1,7 @@
 package com.example.counter.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -47,7 +48,8 @@ fun BarChart(
     if (top > 3.0) top = Math.ceil(top / 3.0) * 3.0
     val lines = if (top <= 1.0) 1 else 3
     val gridColor = lineColor(dark)
-    val negativeColor = AppColors.Green
+    val negativeColor = AppColors.Danger
+    val signed = values.any { it < 0 }
 
     Column(modifier = modifier.fillMaxWidth()) {
         Row(modifier = Modifier.fillMaxWidth().height(150.dp)) {
@@ -57,7 +59,7 @@ fun BarChart(
             ) {
                 (lines downTo 0).forEach { index ->
                     Text(
-                        formatNumber(top * index / lines),
+                        formatNumber(if (signed) top * (2.0 * index / lines - 1) else top * index / lines),
                         fontSize = 10.sp,
                         color = AppColors.Muted
                     )
@@ -80,10 +82,10 @@ fun BarChart(
                     val barWidth = minOf(slot * 0.56f, 24.dp.toPx())
                     values.forEachIndexed { index, value ->
                         if (value != 0.0) {
-                            val barHeight = (Math.abs(value) / top * height).toFloat().coerceAtMost(height)
+                            val barHeight = (Math.abs(value) / top * height / (if (signed) 2 else 1)).toFloat().coerceAtMost(height)
                             drawRoundRect(
                                 color = if (value < 0) negativeColor else accent,
-                                topLeft = Offset(slot * index + (slot - barWidth) / 2, height - barHeight),
+                                topLeft = Offset(slot * index + (slot - barWidth) / 2, (if (signed) height / 2 else height) - (if (value < 0) 0f else barHeight)),
                                 size = Size(barWidth, maxOf(barHeight, 2f)),
                                 cornerRadius = CornerRadius(4f, 4f)
                             )
@@ -166,7 +168,8 @@ fun CalendarView(
     period: Period,
     entries: List<EntryEntity>,
     monday: Boolean,
-    dark: Boolean
+    dark: Boolean,
+    onDate: (String) -> Unit = {}
 ) {
     val yearMonth = period.calendarMonth
     val first = yearMonth.atDay(1)
@@ -214,6 +217,7 @@ fun CalendarView(
                             modifier = Modifier
                                 .weight(1f)
                                 .height(44.dp)
+                                .clickable { onDate(key) }
                                 .padding(2.dp)
                                 .clip(RoundedCornerShape(9.dp))
                                 .background(

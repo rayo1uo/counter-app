@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [CounterEntity::class, EntryEntity::class, CategoryEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class CounterDatabase : RoomDatabase() {
@@ -20,6 +20,10 @@ abstract class CounterDatabase : RoomDatabase() {
                 context.applicationContext,
                 CounterDatabase::class.java,
                 "counter.db"
-            ).fallbackToDestructiveMigration().build()
+            ).addMigrations(object : androidx.room.migration.Migration(1, 2) {
+                override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE counters ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0")
+                }
+            }).build()
     }
 }
