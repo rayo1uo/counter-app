@@ -76,9 +76,13 @@ dependencies {
 }
 
 // Include the instrumentation APK in the existing GitHub artifact without changing CI permissions.
-val collectAcceptanceApk by tasks.registering(Copy::class) {
+val collectAcceptanceApk by tasks.registering {
     dependsOn("assembleDebugAndroidTest", "lintDebug")
-    from(layout.buildDirectory.dir("outputs/apk/androidTest/debug")) { include("*.apk") }
-    into(layout.buildDirectory.dir("outputs/apk/debug"))
+    doLast {
+        copy {
+            from(layout.buildDirectory.dir("outputs/apk/androidTest/debug")) { include("*.apk") }
+            into(layout.buildDirectory.dir("outputs/apk/debug"))
+        }
+    }
 }
 tasks.matching { it.name == "assembleDebug" }.configureEach { finalizedBy(collectAcceptanceApk) }
