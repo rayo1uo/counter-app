@@ -32,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -198,7 +199,7 @@ fun CounterCard(
             Text((if (counter.pinned) "置顶 · " else "") + counter.icon + " " + counter.name,
                 fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = textColor(dark), maxLines = 1,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-            Text(formatNumber(value), fontSize = if (compact) 30.sp else 48.sp,
+            Text(formatNumber(value), modifier = Modifier.testTag("value-${counter.id}"), fontSize = if (compact) 30.sp else 48.sp,
                 fontWeight = FontWeight.Bold, color = textColor(dark), maxLines = 1)
             Text("累计 ${formatNumber(cumulative)} · $subtitle", fontSize = 11.sp, color = AppColors.Muted, maxLines = 1)
             if (counter.target > 0) {
@@ -207,12 +208,12 @@ fun CounterCard(
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(48.dp).clip(CircleShape).background(chipColor(dark)).clickable(onClick = onMinus), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(48.dp).clip(CircleShape).background(chipColor(dark)).testTag("minus-${counter.id}").clickable(onClick = onMinus), contentAlignment = Alignment.Center) {
                 Text("−", fontSize = 26.sp, color = textColor(dark))
             }
             Spacer(Modifier.width(8.dp))
             Box(Modifier.size(48.dp).clip(CircleShape).background(accent)
-                .combinedClickable(onClick = onPlus, onLongClick = onBatch), contentAlignment = Alignment.Center) {
+                .testTag("plus-${counter.id}").combinedClickable(onClick = onPlus, onLongClick = onBatch), contentAlignment = Alignment.Center) {
                 Text("+", fontSize = 28.sp, color = Color.White)
             }
             Box {

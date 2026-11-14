@@ -300,6 +300,7 @@ fun CounterRoot(vm: CounterViewModel) {
             onDismiss = close,
             onPick = { date ->
                 vm.setDate(date)
+                vm.setRange(date, date)
                 vm.setAnchor(TimeUtils.parse(date))
             }
         )

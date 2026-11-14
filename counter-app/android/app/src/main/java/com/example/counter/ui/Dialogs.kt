@@ -129,7 +129,7 @@ fun CounterEditorDialog(
 
                 Text("预设颜色", fontSize = 12.sp, color = AppColors.Muted)
                 Spacer(Modifier.height(8.dp))
-                Row {
+                Row(Modifier.horizontalScroll(rememberScrollState())) {
                     AppColors.PaletteArgb.forEach { argb ->
                         val selected = argb == color
                         Box(

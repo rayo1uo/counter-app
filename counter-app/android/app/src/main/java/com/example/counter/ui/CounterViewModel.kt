@@ -79,7 +79,7 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
         _ui.value = block(_ui.value)
     }
 
-    fun setTab(tab: Tab) = update { it.copy(tab = tab) }
+    fun setTab(tab: Tab) = update { it.copy(tab = tab, counterFilter = if (tab == Tab.HOME) null else it.counterFilter) }
     fun setDate(date: String) = update { it.copy(selectedDate = date) }
     fun setAnchor(date: LocalDate) = update { it.copy(anchor = date) }
     fun setDim(dim: Dim) = update { it.copy(dim = dim) }
