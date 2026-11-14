@@ -25,25 +25,26 @@ class UiAcceptanceTest {
         }
         rule.waitUntil(10000) { rule.onAllNodesWithTag("plus-ui-check").fetchSemanticsNodes().isNotEmpty() }
         rule.onNodeWithTag("plus-ui-check").performClick()
-        rule.waitUntil(5000) { rule.onAllNodesWithText("1").fetchSemanticsNodes().isNotEmpty() }
-        rule.onNodeWithTag("value-ui-check").assertTextEquals("1")
+        rule.waitUntil(5000) { runBlocking { app.container.dao.allEntries().size == 1 } }
+        rule.onNodeWithTag("value-ui-check", useUnmergedTree=true).assertTextEquals("1")
         rule.onNodeWithTag("minus-ui-check").performClick()
+        rule.waitUntil(5000) { runBlocking { app.container.dao.allEntries().size == 2 } }
         rule.waitForIdle()
         rule.onNodeWithText("撤销").performClick()
         rule.waitUntil(5000) { runBlocking { app.container.dao.allEntries().size == 1 } }
-        rule.onNodeWithTag("value-ui-check").assertTextEquals("1")
+        rule.onNodeWithTag("value-ui-check", useUnmergedTree=true).assertTextEquals("1")
         rule.onNodeWithTag("plus-ui-check").performTouchInput { longClick() }
         rule.onNodeWithText("记录 · 检车").assertIsDisplayed()
         rule.onNodeWithText("本次增量（可填负数）").performTextReplacement("12")
         rule.onNodeWithText("备注（可选）").performTextInput("批量验收")
         rule.onNodeWithText("记录", useUnmergedTree=true).performClick()
         rule.waitUntil(5000) { runBlocking { app.container.dao.allEntries().size == 2 } }
-        rule.onNodeWithTag("value-ui-check").assertTextEquals("13")
-        rule.onNodeWithTag("value-ui-check").performClick()
+        rule.onNodeWithTag("value-ui-check", useUnmergedTree=true).assertTextEquals("13")
+        rule.onNodeWithTag("value-ui-check", useUnmergedTree=true).performTouchInput { click() }
         rule.onNodeWithText("批量验收").assertIsDisplayed()
         rule.onNodeWithContentDescription("统计").performClick()
         rule.onNodeWithText("周期净增量").assertIsDisplayed()
         rule.onNodeWithContentDescription("首页").performClick()
-        rule.onNodeWithTag("value-ui-check").assertTextEquals("13")
+        rule.onNodeWithTag("value-ui-check", useUnmergedTree=true).assertTextEquals("13")
     }
 }
