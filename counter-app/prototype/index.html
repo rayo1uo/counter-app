@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#F5F5F2">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>计数器 · 交互原型</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#F5F5F2;--card:#FFFFFF;--text:#1C1C1E;--muted:#8A8A8E;--line:#E5E5E0;
+  --accent:#F5921E;--soft:#FFE9CF;--strong:#C86A00;--blue:#2F7BF6;--chip:#EDEDE9;
+  --shadow:0 2px 12px rgba(0,0,0,.05);
+}
+body.dark{
+  --bg:#1B1B1D;--card:#2B2B2E;--text:#F2F2F7;--muted:#98989F;--line:#3D3D40;
+  --soft:#4A331A;--strong:#FFB45C;--chip:#343437;--shadow:none;
+}
+html,body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif}
+body{background:#E7E7E3;color:var(--text)}
+.stage{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:22px}
+.stage-note{font-size:12px;color:#7A7A78;text-align:center;line-height:1.6}
+.device{width:410px;height:838px;max-height:calc(100vh - 74px);background:var(--bg);border:9px solid #17171A;border-radius:44px;box-shadow:0 18px 50px rgba(0,0,0,.22);position:relative;overflow:hidden;display:flex;flex-direction:column}
+.statusbar{height:46px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 24px;font-size:13px;font-weight:600;position:relative}
+.island{width:112px;height:30px;background:#111;border-radius:18px;position:absolute;left:50%;transform:translateX(-50%);top:7px;display:flex;align-items:center;justify-content:center;gap:6px}
+.island i{width:7px;height:7px;border-radius:50%;background:#2E6BE6;display:block}
+.island span{width:22px;height:4px;border-radius:3px;background:#2A2A2C;display:block}
+.sb-right{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:500}
+.sb-bat{width:22px;height:11px;border:1.4px solid currentColor;border-radius:3px;position:relative;opacity:.85}
+.sb-bat::after{content:"";position:absolute;right:-4px;top:2.5px;width:2px;height:4px;background:currentColor;border-radius:0 2px 2px 0}
+.sb-bat b{position:absolute;left:1px;top:1px;bottom:1px;width:78%;background:currentColor;border-radius:1px;display:block}
+.screen{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;position:relative}
+.screen::-webkit-scrollbar{display:none}
+.page{display:none;padding:6px 18px 120px}
+.page.active{display:block}
+.topbar{display:flex;align-items:center;justify-content:space-between;height:46px;margin-bottom:6px}
+.tb-title{font-size:16px;font-weight:600;text-align:center;line-height:1.2;flex:1}
+.tb-sub{font-size:11px;color:var(--muted);font-weight:400;margin-top:2px}
+.rnd{width:38px;height:38px;border-radius:50%;background:var(--card);border:none;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;font-size:17px;color:var(--text);cursor:pointer;flex:none}
+.rnd.plain{background:transparent;box-shadow:none;font-size:20px}
+.pill{height:38px;padding:0 15px;border-radius:20px;background:var(--card);border:none;box-shadow:var(--shadow);display:flex;align-items:center;gap:6px;font-size:14px;font-weight:500;color:var(--text);cursor:pointer;flex:none}
+.tb-right{display:flex;gap:8px;align-items:center}
+.crown{color:#E5A90B}
+.search{height:40px;border-radius:13px;background:var(--card);display:flex;align-items:center;gap:9px;padding:0 13px;color:var(--muted);box-shadow:var(--shadow);margin-bottom:14px}
+.search input{border:0;outline:0;background:transparent;flex:1;font-size:14px;color:var(--text);font-family:inherit}
+.search svg{flex:none}
+.weekrow{display:flex;align-items:center;gap:4px;margin-bottom:16px}
+.weekstrip{flex:1;display:flex;gap:6px;overflow:hidden}
+.day{flex:1;min-width:0;height:62px;border-radius:15px;background:var(--card);border:1.5px solid transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;position:relative;box-shadow:var(--shadow)}
+.day .dw{font-size:11px;color:var(--muted)}
+.day .dn{font-size:17px;font-weight:600;color:var(--text)}
+.day.sel{border-color:var(--accent);background:var(--card)}
+.day.sel .dn{color:var(--strong)}
+.day.sel::after{content:"";position:absolute;bottom:6px;width:4px;height:4px;border-radius:50%;background:var(--accent)}
+.day.today:not(.sel) .dn{color:var(--blue)}
+.wk-btn{width:20px;height:36px;border:0;background:transparent;color:var(--muted);font-size:19px;cursor:pointer;padding:0;flex:none}
+.counter-card{height:126px;border-radius:22px;margin-bottom:12px;display:flex;align-items:center;padding:0 12px;color:#fff;position:relative;overflow:hidden;cursor:pointer}
+.cc-side{width:52px;height:100%;border:0;background:transparent;color:#fff;font-size:30px;font-weight:300;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:.95;flex:none}
+.cc-side:active{opacity:.5}
+.cc-mid{flex:1;text-align:center;min-width:0;user-select:none}
+.cc-name{font-size:14px;font-weight:500;opacity:.95;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cc-val{font-size:40px;font-weight:500;line-height:1.18;letter-spacing:-1px}
+.cc-sub{font-size:11px;opacity:.8;margin-top:1px}
+.cc-goal{height:4px;border-radius:3px;background:rgba(255,255,255,.28);margin:8px auto 0;width:70%;overflow:hidden}
+.cc-goal i{display:block;height:100%;background:#fff;border-radius:3px}
+.summary{font-size:13px;color:var(--muted);padding:6px 4px 0}
+.summary b{color:var(--text);font-weight:600}
+.empty{text-align:center;color:var(--muted);font-size:13px;padding:40px 10px;line-height:1.8}
+.fab{position:absolute;right:22px;bottom:104px;width:56px;height:56px;border-radius:50%;background:var(--card);border:none;box-shadow:0 4px 16px rgba(0,0,0,.13);font-size:29px;font-weight:300;color:var(--text);cursor:pointer;z-index:5}
+.fab:active{transform:scale(.95)}
+.tabbar{position:absolute;left:50%;transform:translateX(-50%);bottom:22px;width:288px;height:62px;border-radius:32px;background:var(--card);box-shadow:0 6px 24px rgba(0,0,0,.12);display:flex;align-items:center;padding:5px;z-index:6;gap:2px}
+.tab{flex:1;height:52px;border:0;background:transparent;border-radius:27px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--muted);font-size:10px;cursor:pointer;font-family:inherit}
+.tab svg{width:20px;height:20px}
+.tab.on{background:var(--chip);color:var(--blue)}
+.seg{display:flex;background:var(--chip);border-radius:12px;padding:3px;gap:2px;margin-bottom:14px}
+.seg button{flex:1;height:32px;border:0;background:transparent;border-radius:10px;font-size:13px;color:var(--muted);cursor:pointer;font-family:inherit}
+.seg button.on{background:var(--card);color:var(--text);font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.period{display:flex;align-items:center;justify-content:center;gap:14px;margin:2px 0 14px;font-size:15px;font-weight:600}
+.period button{border:0;background:transparent;color:var(--muted);font-size:19px;cursor:pointer;width:28px}
+.period .plabel{cursor:pointer;min-width:130px;text-align:center}
+.metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.metric{background:var(--card);border-radius:16px;padding:13px 15px;box-shadow:var(--shadow);min-height:76px}
+.metric .mt{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:5px}
+.metric .mv{font-size:25px;font-weight:600;margin-top:6px;line-height:1}
+.info{display:inline-flex;width:14px;height:14px;border:1px solid var(--muted);border-radius:50%;align-items:center;justify-content:center;font-size:9px;font-style:normal;color:var(--muted)}
+.chart-card{background:var(--card);border-radius:18px;padding:16px 15px 12px;margin-bottom:12px;box-shadow:var(--shadow)}
+.cc-head{display:flex;align-items:baseline;gap:9px;font-size:16px;font-weight:600}
+.cc-head .hv{color:var(--accent)}
+.cc-sub2{font-size:12px;color:var(--muted);margin-top:4px}
+.cc-sub2 .n1{font-weight:600;color:var(--text)}
+.cc-sub2 .n2{font-weight:600;color:var(--accent)}
+.cc-sub2 .n3{font-weight:600;color:var(--blue)}
+.chart-wrap{margin-top:12px}
+.pie-row{display:flex;align-items:center;gap:18px;margin-top:14px;flex-wrap:wrap}
+.pie{width:132px;height:132px;border-radius:50%;flex:none}
+.legend{flex:1;min-width:130px;font-size:12px;line-height:2}
+.legend i{width:9px;height:9px;border-radius:3px;display:inline-block;margin-right:7px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:12px}
+.cal-h{font-size:11px;color:var(--muted);text-align:center;padding:3px 0}
+.cal-c{aspect-ratio:1;border-radius:9px;background:var(--chip);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;color:var(--muted);gap:1px}
+.cal-c.has{color:#fff;font-weight:600}
+.cal-c.blank{background:transparent}
+.cal-c b{font-size:12px}
+.daygroup{margin-bottom:22px;position:relative}
+.dg-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.dg-badge{width:42px;height:48px;border-radius:12px;background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:var(--shadow);flex:none}
+.dg-badge b{font-size:19px;color:var(--strong);line-height:1}
+.dg-badge span{font-size:10px;color:var(--muted);margin-top:2px}
+.dg-week{font-size:14px;color:var(--muted)}
+.timeline{position:relative;padding-left:64px}
+.timeline::before{content:"";position:absolute;left:31px;top:6px;bottom:10px;width:1px;background:var(--line)}
+.tl-row{position:relative;margin-bottom:12px}
+.tl-time{position:absolute;left:-64px;top:16px;width:52px;text-align:right;font-size:11px;color:var(--muted);line-height:1.5}
+.tl-time b{display:block;font-weight:400}
+.tl-gap{position:absolute;left:-64px;top:-13px;width:52px;text-align:right;font-size:10px;color:#B4B4B0}
+.tl-dot{position:absolute;left:-36px;top:22px;width:7px;height:7px;border-radius:50%;background:var(--line);border:2px solid var(--bg)}
+.entry{background:var(--card);border-radius:16px;padding:14px 15px;box-shadow:var(--shadow);display:flex;align-items:center;gap:10px;cursor:pointer;position:relative;transition:transform .16s;touch-action:pan-y}
+.entry.swiped{transform:translateX(-104px)}
+.e-name{flex:1;font-size:15px;font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.e-chip{font-size:13px;font-weight:600;color:var(--strong);background:var(--soft);padding:5px 11px;border-radius:12px}
+.e-after{font-size:12px;color:var(--strong);font-weight:600;min-width:44px;text-align:right}
+.e-note{font-size:11px;color:var(--muted);margin-top:3px;display:block}
+.e-actions{position:absolute;right:-104px;top:0;height:100%;display:flex;align-items:center;gap:6px}
+.e-actions button{height:100%;width:48px;border:0;border-radius:12px;font-size:13px;color:#fff;cursor:pointer;font-family:inherit}
+.hint{text-align:center;font-size:11px;color:#B0B0AC;padding:8px 0 4px}
+.mask{position:absolute;inset:0;background:rgba(0,0,0,.35);z-index:20;display:none}
+.mask.on{display:block}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:24px 24px 0 0;z-index:21;padding:8px 20px 26px;max-height:80%;overflow-y:auto;transform:translateY(105%);transition:transform .24s ease;box-shadow:0 -6px 30px rgba(0,0,0,.13)}
+.sheet.on{transform:translateY(0)}
+.sheet::-webkit-scrollbar{display:none}
+.grab{width:38px;height:4px;border-radius:3px;background:var(--line);margin:6px auto 14px}
+.sh-title{font-size:17px;font-weight:600;margin-bottom:16px;text-align:center}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+.field input,.field select{width:100%;height:42px;border:1px solid var(--line);border-radius:11px;background:var(--bg);color:var(--text);padding:0 12px;font-size:14px;outline:0;font-family:inherit}
+.field input:focus,.field select:focus{border-color:var(--accent)}
+.frow{display:flex;gap:10px}
+.frow .field{flex:1;min-width:0}
+.colors{display:flex;gap:9px;flex-wrap:wrap}
+.color{width:32px;height:32px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}
+.color.sel{border-color:var(--text);transform:scale(1.08)}
+.btn{width:100%;height:46px;border:0;border-radius:13px;background:var(--chip);color:var(--text);font-size:15px;font-weight:500;cursor:pointer;font-family:inherit;margin-top:6px}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.danger{background:#FFF0EF;color:#D6453D}
+body.dark .btn.danger{background:#4A2624;color:#FF9A93}
+.btn.ghost{background:transparent;color:var(--muted)}
+.menu-item{height:48px;display:flex;align-items:center;gap:10px;font-size:15px;border-bottom:1px solid var(--line);cursor:pointer}
+.menu-item:last-child{border-bottom:0}
+.menu-item .mi-ic{width:26px;font-size:16px;text-align:center}
+.set-row{display:flex;align-items:center;justify-content:space-between;height:48px;border-bottom:1px solid var(--line);font-size:14px}
+.set-row:last-child{border-bottom:0}
+.switch{width:46px;height:27px;border-radius:15px;background:var(--chip);border:0;position:relative;cursor:pointer;flex:none;transition:background .2s}
+.switch::after{content:"";position:absolute;left:3px;top:3px;width:21px;height:21px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:transform .2s}
+.switch.on{background:#34C759}
+.switch.on::after{transform:translateX(19px)}
+.set-note{font-size:11px;color:var(--muted);line-height:1.6;padding:10px 0}
+.toast{position:absolute;left:50%;bottom:100px;transform:translateX(-50%) translateY(10px);background:rgba(30,30,32,.9);color:#fff;font-size:13px;padding:9px 16px;border-radius:20px;z-index:30;opacity:0;pointer-events:none;transition:all .2s;white-space:nowrap}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.hidden{display:none!important}
+@media (max-width:520px){
+  body{background:var(--bg)}
+  .stage{padding:0;gap:0;min-height:100vh;justify-content:flex-start}
+  .stage-note{display:none}
+  .device{width:100%;height:100vh;max-height:none;border:0;border-radius:0;box-shadow:none}
+  .statusbar{height:40px}
+}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="device" id="device">
+    <div class="statusbar">
+      <span id="clock">18:53</span>
+      <div class="island"><i></i><span></span></div>
+      <div class="sb-right">
+        <span>&#9650;</span><span>&#9679;&#9679;&#9679;</span><span>85</span><span class="sb-bat"><b></b></span>
+      </div>
+    </div>
+
+    <div class="screen" id="screen">
+      <section class="page active" id="page-home">
+        <div class="topbar">
+          <button class="pill" data-act="open-categories">&#8249; <span id="homeFilter">全部</span></button>
+          <div class="tb-right">
+            <button class="rnd crown" data-act="pro">&#9819;</button>
+            <button class="rnd" data-act="open-more">&#183;&#183;&#183;</button>
+            <button class="rnd" data-act="open-settings">&#9881;</button>
+          </div>
+        </div>
+        <div class="search">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.6"/><path d="M11 11L14.5 14.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <input id="homeSearch" placeholder="搜索" autocomplete="off">
+        </div>
+        <div class="weekrow">
+          <button class="wk-btn" data-act="week-prev">&#8249;</button>
+          <div class="weekstrip" id="weekstrip"></div>
+          <button class="wk-btn" data-act="week-next">&#8250;</button>
+        </div>
+        <div id="counterList"></div>
+        <div class="summary" id="homeSummary"></div>
+      </section>
+
+      <section class="page" id="page-history">
+        <div class="topbar">
+          <button class="rnd" data-act="open-categories">&#9776;</button>
+          <div class="tb-title">历史记录<div class="tb-sub" id="histFilter">全部</div></div>
+          <div class="tb-right">
+            <button class="rnd" data-act="open-date-jump">&#128197;</button>
+            <button class="rnd" data-act="open-more">&#183;&#183;&#183;</button>
+          </div>
+        </div>
+        <div id="historyList"></div>
+        <div class="hint">左滑或点击记录可编辑或删除记录</div>
+      </section>
+
+      <section class="page" id="page-stats">
+        <div class="topbar">
+          <button class="rnd" data-act="open-categories">&#9776;</button>
+          <div class="tb-title">统计<div class="tb-sub" id="statFilter">全部</div></div>
+          <div class="tb-right"><button class="rnd" data-act="open-more">&#183;&#183;&#183;</button></div>
+        </div>
+        <div class="seg" id="dimSeg">
+          <button data-act="dim" data-dim="day">日</button>
+          <button data-act="dim" data-dim="week">周</button>
+          <button data-act="dim" data-dim="month" class="on">月</button>
+          <button data-act="dim" data-dim="year">年</button>
+          <button data-act="dim" data-dim="all">全部</button>
+        </div>
+        <div class="period">
+          <button data-act="period-prev">&#8249;</button>
+          <span class="plabel" id="periodLabel" data-act="period-pick">2026年11月 &#8964;</span>
+          <button data-act="period-next">&#8250;</button>
+        </div>
+        <div class="metrics" id="metrics"></div>
+        <div class="seg" id="viewSeg" style="max-width:252px;margin:0 auto 14px">
+          <button data-act="view" data-view="chart" class="on">图表</button>
+          <button data-act="view" data-view="pie">饼图</button>
+          <button data-act="view" data-view="calendar">日历</button>
+        </div>
+        <div id="statBody"></div>
+      </section>
+    </div>
+
+    <button class="fab" id="fab" data-act="add-counter">+</button>
+    <div class="tabbar">
+      <button class="tab on" data-act="tab" data-tab="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M3 10.5L12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg><span>首页</span></button>
+      <button class="tab" data-act="tab" data-tab="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg><span>历史记录</span></button>
+      <button class="tab" data-act="tab" data-tab="stats"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="13" width="4" height="8" rx="1.2"/><rect x="10" y="7" width="4" height="14" rx="1.2"/><rect x="17" y="3" width="4" height="18" rx="1.2"/></svg><span>统计</span></button>
+    </div>
+    <div class="mask" id="mask" data-act="close-sheet"></div>
+    <div class="sheet" id="sheet"></div>
+    <div class="toast" id="toast"></div>
+    <input type="file" id="fileInput" accept="application/json,.json" class="hidden">
+  </div>
+  <div class="stage-note">交互原型 · 三页均可点击操作，数据保存在浏览器本地（localStorage）<br>长按计数卡中间可自定义数值并补录到过去日期</div>
+</div>
+
+<script>
+"use strict";
+var KEY = "counter_proto_v1";
+var WEEK = ["日","一","二","三","四","五","六"];
+var PALETTE = ["#F5921E","#9B9B9B","#3B82F6","#34C759","#AF52DE","#FF3B30","#FF2D55","#30B0C7"];
+var $ = function(s){ return document.querySelector(s); };
+var $$ = function(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); };
+var pad = function(n){ return String(n).padStart(2,"0"); };
+var ymd = function(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); };
+var parseYmd = function(s){ var p=s.split("-").map(Number); return new Date(p[0],p[1]-1,p[2]); };
+var addDays = function(d,n){ var x=new Date(d.getTime()); x.setDate(x.getDate()+n); return x; };
+var addMonths = function(d,n){ var x=new Date(d.getFullYear(),d.getMonth()+n,1); return x; };
+var esc = function(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]; }); };
+var fmtNum = function(n){ return Math.abs(n-Math.round(n))<1e-9 ? String(Math.round(n)) : String(Math.round(n*100)/100); };
+var uid = function(p){ return p+Date.now().toString(36)+Math.random().toString(36).slice(2,6); };
+
+function seed(){
+  var t = new Date(), d = ymd(t);
+  var dayStart = new Date(t.getFullYear(),t.getMonth(),t.getDate(),0,0,0).getTime();
+  var t2 = Date.now()-60000, t1 = t2-61*60000;
+  if(t1<dayStart){ t1=dayStart; t2=t1+61*60000; }
+  return {
+    counters:[
+      {id:"c1",name:"大型车",color:"#9B9B9B",icon:"",step:1,initial:0,target:0,category:"工作",archived:false,createdAt:dayStart},
+      {id:"c2",name:"检车",color:"#F5921E",icon:"",step:1,initial:0,target:0,category:"工作",archived:false,createdAt:dayStart+60000}
+    ],
+    entries:[
+      {id:"e1",counterId:"c2",delta:1,valueAfter:1,ts:t1,localDate:ymd(new Date(t1)),note:"",createdAt:t1},
+      {id:"e2",counterId:"c2",delta:12,valueAfter:13,ts:t2,localDate:ymd(new Date(t2)),note:"",createdAt:t2}
+    ],
+    categories:["工作","生活"],
+    settings:{weekStart:0,theme:"light",sound:true,haptic:true,mode:"daily"}
+  };
+}
+function load(){
+  try{
+    var raw = localStorage.getItem(KEY);
+    if(!raw) return null;
+    var o = JSON.parse(raw);
+    if(!o || !Array.isArray(o.counters) || !Array.isArray(o.entries)) return null;
+    if(!o.settings) o.settings = seed().settings;
+    if(!o.categories) o.categories = ["工作","生活"];
+    return o;
+  }catch(e){ return null; }
+}
+var state = load() || seed();
+var ui = { tab:"home", date:ymd(new Date()), dim:"month", anchor:new Date(), view:"chart", filter:"all", search:"", formColor:PALETTE[0] };
+
+function save(){ try{ localStorage.setItem(KEY,JSON.stringify(state)); }catch(e){} }
+function counter(id){ return state.counters.find(function(c){ return c.id===id; }); }
+function visibleCounters(){
+  return state.counters.filter(function(c){
+    if(c.archived) return false;
+    if(ui.filter!=="all" && c.category!==ui.filter) return false;
+    if(ui.search && c.name.toLowerCase().indexOf(ui.search.toLowerCase())<0) return false;
+    return true;
+  });
+}
+function sortEntries(es){
+  return es.slice().sort(function(a,b){
+    return a.localDate.localeCompare(b.localDate) || a.ts-b.ts || String(a.id).localeCompare(String(b.id));
+  });
+}
+function recalc(cid){
+  var c = counter(cid); if(!c) return;
+  var es = sortEntries(state.entries.filter(function(e){ return e.counterId===cid; }));
+  var acc = state.settings.mode==="total" ? (Number(c.initial)||0) : 0, last=null;
+  es.forEach(function(e){
+    if(state.settings.mode==="daily"){ if(e.localDate!==last){ acc=0; last=e.localDate; } }
+    acc += Number(e.delta)||0;
+    e.valueAfter = acc;
+  });
+}
+function recalcAll(){ state.counters.forEach(function(c){ recalc(c.id); }); }
+function dayValue(cid,dateStr){
+  var c = counter(cid); if(!c) return 0;
+  var es = state.entries.filter(function(e){ return e.counterId===cid && (state.settings.mode==="daily" ? e.localDate===dateStr : e.localDate<=dateStr); });
+  return es.reduce(function(s,e){ return s+(Number(e.delta)||0); },0)+(state.settings.mode==="total"?(Number(c.initial)||0):0);
+}
+function lastTsOf(cid,dateStr){
+  var es = state.entries.filter(function(e){ return e.counterId===cid && e.localDate===dateStr; });
+  if(!es.length) return null;
+  return Math.max.apply(null,es.map(function(e){ return e.ts; }));
+}
+function relTime(ts){
+  var m = Math.floor((Date.now()-ts)/60000);
+  if(m<3) return "刚刚";
+  if(m<60) return m+"分钟前";
+  if(m<1440) return Math.floor(m/60)+"小时前";
+  return Math.floor(m/1440)+"天前";
+}
+function beep(){
+  if(!state.settings.sound) return;
+  try{
+    var AC = window.AudioContext||window.webkitAudioContext; if(!AC) return;
+    var ac = new AC(), o = ac.createOscillator(), g = ac.createGain();
+    o.frequency.value = 900; o.type="sine"; g.gain.value = 0.045;
+    o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime+0.055);
+    setTimeout(function(){ try{ ac.close(); }catch(e){} },260);
+  }catch(e){}
+}
+function buzz(){ try{ if(state.settings.haptic && navigator.vibrate) navigator.vibrate(12); }catch(e){} }
+var toastTimer=null;
+function toast(msg){
+  var t=$("#toast"); t.textContent=msg; t.classList.add("on");
+  clearTimeout(toastTimer); toastTimer=setTimeout(function(){ t.classList.remove("on"); },1700);
+}
+
+function addEntry(cid,delta,ts,note){
+  var e={id:uid("e"),counterId:cid,delta:Number(delta)||0,ts:ts,localDate:ymd(new Date(ts)),note:note||"",createdAt:Date.now()};
+  state.entries.push(e); recalc(cid); save(); renderAll(); beep(); buzz();
+  toast("已记录 "+(e.delta>0?"+":"")+fmtNum(e.delta));
+}
+function deleteEntry(id){
+  var e=state.entries.find(function(x){ return x.id===id; }); if(!e) return;
+  state.entries=state.entries.filter(function(x){ return x.id!==id; });
+  recalc(e.counterId); save(); renderAll(); toast("已删除记录");
+}
+function undoLast(){
+  if(!state.entries.length){ toast("没有可撤销的记录"); return; }
+  var last=state.entries.slice().sort(function(a,b){ return (b.createdAt||0)-(a.createdAt||0); })[0];
+  deleteEntry(last.id); toast("已撤销上一次计数");
+}
+
+function periodOf(dim,a){
+  var y=a.getFullYear(),m=a.getMonth(),d=a.getDate(), buckets=[],start,end,label;
+  if(dim==="day"){
+    start=new Date(y,m,d,0,0,0); end=new Date(y,m,d,23,59,59);
+    label=y+"年"+(m+1)+"月"+d+"日";
+    for(var h=0;h<24;h++){
+      buckets.push({s:new Date(y,m,d,h,0,0).getTime(),e:new Date(y,m,d,h,59,59).getTime(),tick:h%6===0,tickText:String(h)});
+    }
+  }else if(dim==="week"){
+    var ws=(a.getDay()-(state.settings.weekStart||0)+7)%7;
+    var w0=addDays(a,-ws);
+    start=new Date(w0.getFullYear(),w0.getMonth(),w0.getDate(),0,0,0);
+    end=new Date(addDays(w0,6).getFullYear(),addDays(w0,6).getMonth(),addDays(w0,6).getDate(),23,59,59);
+    label=(w0.getMonth()+1)+"月"+w0.getDate()+"日 - "+(addDays(w0,6).getMonth()+1)+"月"+addDays(w0,6).getDate()+"日";
+    for(var i=0;i<7;i++){
+      var dd=addDays(w0,i);
+      buckets.push({s:new Date(dd.getFullYear(),dd.getMonth(),dd.getDate(),0,0,0).getTime(),e:new Date(dd.getFullYear(),dd.getMonth(),dd.getDate(),23,59,59).getTime(),tick:true,tickText:WEEK[dd.getDay()]});
+    }
+  }else if(dim==="month"){
+    start=new Date(y,m,1,0,0,0); end=new Date(y,m+1,0,23,59,59);
+    label=y+"年"+(m+1)+"月";
+    var days=new Date(y,m+1,0).getDate();
+    for(var k=1;k<=days;k++){
+      buckets.push({s:new Date(y,m,k,0,0,0).getTime(),e:new Date(y,m,k,23,59,59).getTime(),tick:(k===1||k%3===0),tickText:String(k)});
+    }
+  }else if(dim==="year"){
+    start=new Date(y,0,1,0,0,0); end=new Date(y,11,31,23,59,59);
+    label=y+"年";
+    for(var mo=0;mo<12;mo++){
+      buckets.push({s:new Date(y,mo,1,0,0,0).getTime(),e:new Date(y,mo+1,0,23,59,59).getTime(),tick:(mo%2===0),tickText:String(mo+1)});
+    }
+  }else{
+    var yrs=state.entries.map(function(e){ return Number(e.localDate.slice(0,4)); });
+    var minY=yrs.length?Math.min.apply(null,yrs):y, maxY=Math.max(y,yrs.length?Math.max.apply(null,yrs):y);
+    start=new Date(minY,0,1,0,0,0); end=new Date(maxY,11,31,23,59,59);
+    label=minY+" - "+maxY;
+    for(var yy=minY;yy<=maxY;yy++){
+      buckets.push({s:new Date(yy,0,1,0,0,0).getTime(),e:new Date(yy,11,31,23,59,59).getTime(),tick:true,tickText:String(yy)});
+    }
+  }
+  return {start:start,end:end,label:label,buckets:buckets};
+}
+function entriesIn(p){
+  var cids={}; visibleCounters().forEach(function(c){ cids[c.id]=1; });
+  return state.entries.filter(function(e){ return e.ts>=p.start.getTime() && e.ts<=p.end.getTime() && cids[e.counterId]; });
+}
+function bucketValues(p,es){
+  return p.buckets.map(function(b){ return es.reduce(function(s,e){ return (e.ts>=b.s&&e.ts<=b.e)?s+(Number(e.delta)||0):s; },0); });
+}
+function niceStep(max){
+  var raw=max/3, mag=Math.pow(10,Math.floor(Math.log(raw)/Math.LN10)), n=raw/mag;
+  var step=n<=1?1:n<=2?2:n<=5?5:10;
+  return step*mag;
+}
+function renderBars(p,vals){
+  var W=520,H=172,L=30,R=8,T=10,B=26, iw=W-L-R, ih=H-T-B;
+  var peak=Math.max.apply(null,vals.map(function(v){ return Math.abs(v); }).concat([0]));
+  var top=Math.max(1,Math.ceil(peak));
+  if(top>3) top=Math.ceil(top/3)*3;
+  var lines=top<=1?1:3, g="";
+  for(var i=0;i<=lines;i++){
+    var yy=T+ih-ih*i/lines;
+    g+='<line x1="'+L+'" y1="'+yy+'" x2="'+(W-R)+'" y2="'+yy+'" style="stroke:var(--line);stroke-width:1"/>';
+    g+='<text x="'+(L-6)+'" y="'+(yy+4)+'" text-anchor="end" style="fill:var(--muted);font-size:11px">'+fmtNum(top*i/lines)+'</text>';
+  }
+  var bw=iw/p.buckets.length, w=Math.min(bw*0.56,24);
+  p.buckets.forEach(function(b,i){
+    var v=vals[i]||0, h=Math.min(ih,Math.abs(v)/top*ih);
+    var x=L+i*bw+(bw-w)/2;
+    var y=T+ih-h;
+    if(v!==0) g+='<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+Math.max(h,2)+'" rx="3" style="fill:'+(v<0?"#34C759":"var(--accent)")+'"/>';
+    if(b.tick) g+='<text x="'+(L+i*bw+bw/2)+'" y="'+(H-6)+'" text-anchor="middle" style="fill:var(--muted);font-size:11px">'+esc(b.tickText)+'</text>';
+  });
+  return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="display:block">'+g+'</svg>';
+}
+function renderPie(es){
+  var parts=[],tot=0;
+  visibleCounters().forEach(function(c){
+    var v=es.filter(function(e){ return e.counterId===c.id; }).reduce(function(s,e){ return s+(Number(e.delta)||0); },0);
+    if(v>0){ parts.push({name:c.name,color:c.color,v:v}); tot+=v; }
+  });
+  if(!tot) return '<div class="empty">该周期暂无计数数据</div>';
+  var acc=0, stops=parts.map(function(p){
+    var from=acc/tot*100; acc+=p.v; var to=acc/tot*100;
+    return p.color+" "+from+"% "+to+"%";
+  }).join(",");
+  var legend=parts.map(function(p){
+    return '<div><i style="background:'+p.color+'"></i>'+esc(p.name)+' &nbsp;<b>'+fmtNum(p.v)+'</b> &nbsp;<span style="color:var(--muted)">'+Math.round(p.v/tot*100)+'%</span></div>';
+  }).join("");
+  return '<div class="pie-row"><div class="pie" style="background:conic-gradient('+stops+')"></div><div class="legend">'+legend+'</div></div>';
+}
+function renderCalendar(es){
+  var a=ui.anchor,y=a.getFullYear(),m=a.getMonth();
+  var first=new Date(y,m,1), days=new Date(y,m+1,0).getDate();
+  var lead=(first.getDay()-(state.settings.weekStart||0)+7)%7;
+  var by={},mx=1;
+  es.forEach(function(e){ by[e.localDate]=(by[e.localDate]||0)+(Number(e.delta)||0); mx=Math.max(mx,Math.abs(by[e.localDate])); });
+  var h="";
+  for(var i=0;i<7;i++) h+='<div class="cal-h">'+WEEK[(i+(state.settings.weekStart||0))%7]+'</div>';
+  for(var k=0;k<lead;k++) h+='<div class="cal-c blank"></div>';
+  for(var d=1;d<=days;d++){
+    var key=y+"-"+pad(m+1)+"-"+pad(d), v=by[key]||0;
+    var bg=v?("rgba(245,146,30,"+(0.42+0.58*Math.min(1,Math.abs(v)/mx)).toFixed(2)+")"):"";
+    h+='<div class="cal-c '+(v?"has":"")+'" '+(v?'style="background:'+bg+'"':"")+'><span>'+d+'</span>'+(v?'<b>'+fmtNum(v)+'</b>':"")+'</div>';
+  }
+  return '<div style="font-size:13px;color:var(--muted);margin-top:4px">'+y+'年'+(m+1)+'月 · 每日合计</div><div class="cal">'+h+'</div>';
+}
+
+function renderHome(){
+  $("#homeFilter").textContent=ui.filter==="all"?"全部":ui.filter;
+  var base=parseYmd(ui.date), ws=(base.getDay()-(state.settings.weekStart||0)+7)%7, w0=addDays(base,-ws);
+  var today=ymd(new Date()), wh="";
+  for(var i=0;i<7;i++){
+    var d=addDays(w0,i), s=ymd(d);
+    wh+='<div class="day '+(s===ui.date?"sel":"")+' '+(s===today?"today":"")+'" data-act="pick-date" data-date="'+s+'"><span class="dw">'+WEEK[d.getDay()]+'</span><span class="dn">'+d.getDate()+'</span></div>';
+  }
+  $("#weekstrip").innerHTML=wh;
+  var cs=visibleCounters(), html="";
+  cs.forEach(function(c){
+    var v=dayValue(c.id,ui.date), lt=lastTsOf(c.id,ui.date);
+    var sub=lt?relTime(lt):"暂无记录";
+    var goal=c.target>0?'<div class="cc-goal"><i style="width:'+Math.min(100,Math.max(0,v/c.target*100))+'%"></i></div>':"";
+    html+='<div class="counter-card" style="background:'+c.color+'">'
+      +'<button class="cc-side" data-act="inc" data-id="'+c.id+'" data-delta="-'+c.step+'">&#8722;</button>'
+      +'<div class="cc-mid" data-act="quick-log" data-id="'+c.id+'">'
+      +'<div class="cc-name">'+esc(c.icon?c.icon+" "+c.name:c.name)+'</div>'
+      +'<div class="cc-val">'+fmtNum(v)+'</div><div class="cc-sub">'+esc(sub)+"</div>"+goal+"</div>"
+      +'<button class="cc-side" data-act="inc" data-id="'+c.id+'" data-delta="'+c.step+'">+</button></div>';
+  });
+  if(!cs.length) html='<div class="empty">还没有计数器<br>点右下角 + 新增一个</div>';
+  $("#counterList").innerHTML=html;
+  var dayEntries=state.entries.filter(function(e){ return e.localDate===ui.date && cs.some(function(c){return c.id===e.counterId;}); });
+  var total=dayEntries.reduce(function(s,e){ return s+(Number(e.delta)||0); },0);
+  var avg=cs.length?total/cs.length:0;
+  $("#homeSummary").innerHTML=cs.length?("总计：<b>"+fmtNum(total)+"</b>，项均：<b>"+fmtNum(avg)+"</b>"+(state.settings.mode==="total"?" &nbsp;<span style=\"font-size:11px\">(累计模式)</span>":"")):"";
+}
+function renderHistory(){
+  $("#histFilter").textContent=ui.filter==="all"?"全部":ui.filter;
+  var cids={}; visibleCounters().forEach(function(c){ cids[c.id]=1; });
+  var es=state.entries.filter(function(e){ return cids[e.counterId]; }).sort(function(a,b){ return b.ts-a.ts; });
+  if(!es.length){ $("#historyList").innerHTML='<div class="empty">暂无历史记录<br>在首页点 + 开始计数</div>'; return; }
+  var groups={},order=[];
+  es.forEach(function(e){ if(!groups[e.localDate]){groups[e.localDate]=[];order.push(e.localDate);} groups[e.localDate].push(e); });
+  var html="";
+  order.forEach(function(date){
+    var d=parseYmd(date);
+    html+='<div class="daygroup"><div class="dg-head"><div class="dg-badge"><b>'+d.getDate()+'</b><span>'+(d.getMonth()+1)+'月</span></div><div class="dg-week">周'+WEEK[d.getDay()]+'</div></div><div class="timeline">';
+    groups[date].forEach(function(e,idx){
+      var c=counter(e.counterId), gap="";
+      if(idx<groups[date].length-1){
+        var diff=Math.round((e.ts-groups[date][idx+1].ts)/60000);
+        if(diff>0) gap='<div class="tl-gap">'+(diff>=60?Math.floor(diff/60)+"时"+(diff%60?diff%60+"分":""):diff+"分")+'</div>';
+      }
+      var t=new Date(e.ts), ampm=t.getHours()<12?"上午":"下午", h12=t.getHours()%12||12;
+      html+='<div class="tl-row">'+gap
+        +'<div class="tl-time"><b>'+h12+":"+pad(t.getMinutes())+'</b>'+ampm+'</div>'
+        +'<div class="tl-dot"></div>'
+        +'<div class="entry" data-act="edit-entry" data-id="'+e.id+'">'
+        +'<div style="flex:1;min-width:0"><div class="e-name">'+esc(c?c.name:"已删除")+'</div>'+(e.note?'<span class="e-note">'+esc(e.note)+'</span>':"")+'</div>'
+        +'<span class="e-chip">'+((Number(e.delta)>0)?"+":"")+fmtNum(e.delta)+'</span>'
+        +'<span class="e-after">&#8594; '+fmtNum(e.valueAfter)+'</span>'
+        +'<div class="e-actions"><button data-act="edit-entry" data-id="'+e.id+'" style="background:#8A8A8E">编辑</button><button data-act="del-entry" data-id="'+e.id+'" style="background:#E2574C">删除</button></div>'
+        +'</div></div>';
+    });
+    html+='</div></div>';
+  });
+  $("#historyList").innerHTML=html;
+}
+function renderStats(){
+  $("#statFilter").textContent=ui.filter==="all"?"全部":ui.filter;
+  $$("#dimSeg button").forEach(function(b){ b.classList.toggle("on",b.dataset.dim===ui.dim); });
+  $$("#viewSeg button").forEach(function(b){ b.classList.toggle("on",b.dataset.view===ui.view); });
+  var p=periodOf(ui.dim,ui.anchor), es=entriesIn(p);
+  $("#periodLabel").innerHTML=p.label+" &#8964;";
+  var days={}; es.forEach(function(e){ days[e.localDate]=1; });
+  var total=es.reduce(function(s,e){ return s+(Number(e.delta)||0); },0);
+  var cs=visibleCounters();
+  $("#metrics").innerHTML=
+     '<div class="metric"><div class="mt">记录次数</div><div class="mv">'+es.length+'</div></div>'
+    +'<div class="metric"><div class="mt">记录天数</div><div class="mv">'+Object.keys(days).length+'</div></div>'
+    +'<div class="metric"><div class="mt">总计 <i class="info">i</i></div><div class="mv">'+fmtNum(total)+'</div></div>'
+    +'<div class="metric"><div class="mt">计数器数量</div><div class="mv">'+cs.length+'</div></div>';
+  if(ui.view==="pie"){
+    $("#statBody").innerHTML='<div class="chart-card"><div class="cc-head">各计数器占比</div><div class="cc-sub2">'+p.label+' · 总计 '+fmtNum(total)+'</div>'+renderPie(es)+'</div>';
+    return;
+  }
+  if(ui.view==="calendar"){
+    $("#statBody").innerHTML='<div class="chart-card"><div class="cc-head">日历分布</div>'+renderCalendar(es)+'</div>';
+    return;
+  }
+  if(!cs.length){ $("#statBody").innerHTML='<div class="empty">没有可统计的计数器</div>'; return; }
+  var html="";
+  cs.forEach(function(c){
+    var ce=es.filter(function(e){ return e.counterId===c.id; });
+    var dd={}; ce.forEach(function(e){ dd[e.localDate]=1; });
+    var dn=Object.keys(dd).length, sum=ce.reduce(function(s,e){ return s+(Number(e.delta)||0); },0);
+    var avg=dn?sum/dn:null;
+    var sub='次数 <span class="n1">'+(ce.length||"-")+'</span>&nbsp; 天数 <span class="n2">'+(dn||"-")+'</span>&nbsp; 日均 <span class="n3">'+(avg===null?"-":fmtNum(avg))+'</span>';
+    var vals=bucketValues(p,ce);
+    html+='<div class="chart-card"><div class="cc-head">'+esc(c.name)+' <span class="hv">'+fmtNum(sum)+'</span></div>'
+      +'<div class="cc-sub2">'+sub+'</div><div class="chart-wrap">'+renderBars(p,vals)+'</div></div>';
+  });
+  $("#statBody").innerHTML=html;
+}
+function renderAll(){
+  document.body.classList.toggle("dark",state.settings.theme==="dark");
+  $$(".tab").forEach(function(b){ b.classList.toggle("on",b.dataset.tab===ui.tab); });
+  $$(".page").forEach(function(p){ p.classList.toggle("active",p.id==="page-"+ui.tab); });
+  $("#fab").classList.toggle("hidden",ui.tab!=="home");
+  renderHome(); renderHistory(); renderStats();
+}
+
+function showSheet(title,body){
+  $("#sheet").innerHTML='<div class="grab"></div><div class="sh-title">'+esc(title)+"</div>"+body;
+  $("#mask").classList.add("on"); $("#sheet").classList.add("on");
+}
+function closeSheet(){ $("#mask").classList.remove("on"); $("#sheet").classList.remove("on"); }
+function val(id){ var el=document.getElementById(id); return el?el.value:""; }
+
+function openCounterEditor(id){
+  var c=id?counter(id):null;
+  ui.formColor=c?c.color:PALETTE[Math.floor(Math.random()*PALETTE.length)];
+  var opts=state.categories.map(function(x){ return '<option value="'+esc(x)+'" '+(c&&c.category===x?"selected":"")+'>'+esc(x)+'</option>'; }).join("");
+  var swatches=PALETTE.map(function(col){ return '<button class="color '+(col===ui.formColor?"sel":"")+'" data-act="pick-color" data-color="'+col+'" style="background:'+col+'"></button>'; }).join("");
+  showSheet(c?"编辑计数器":"新增计数器",
+     '<div class="field"><label>名称</label><input id="f-name" value="'+esc(c?c.name:"")+'" placeholder="例如：检车、喝水、深蹲"></div>'
+    +'<div class="frow"><div class="field"><label>图标（可选）</label><input id="f-icon" value="'+esc(c?c.icon:"")+'" placeholder="emoji"></div>'
+    +'<div class="field"><label>每次增量</label><input id="f-step" type="number" step="any" value="'+(c?c.step:1)+'"></div></div>'
+    +'<div class="frow"><div class="field"><label>初始值</label><input id="f-initial" type="number" step="any" value="'+(c?c.initial:0)+'"></div>'
+    +'<div class="field"><label>目标值（0 为不设）</label><input id="f-target" type="number" step="any" value="'+(c?c.target:0)+'"></div></div>'
+    +'<div class="field"><label>分类</label><select id="f-cat">'+opts+'<option value="__new">＋ 新建分类…</option></select></div>'
+    +'<div class="field"><label>颜色</label><div class="colors" id="colorRow">'+swatches+'</div><input type="hidden" id="f-color" value="'+ui.formColor+'"></div>'
+    +'<button class="btn primary" data-act="save-counter" data-id="'+(id||"")+'">保存</button>'
+    +(c?'<button class="btn danger" data-act="delete-counter" data-id="'+c.id+'">删除该计数器</button>':"")
+    +'<button class="btn ghost" data-act="close-sheet">取消</button>');
+}
+function openQuickLog(cid){
+  var c=counter(cid); if(!c) return;
+  var d=new Date();
+  showSheet("记录 · "+c.name,
+     '<div class="field"><label>本次增量（可填负数）</label><input id="q-delta" type="number" step="any" value="'+c.step+'"></div>'
+    +'<div class="frow"><div class="field"><label>日期（可补录过去）</label><input id="q-date" type="date" value="'+ui.date+'"></div>'
+    +'<div class="field"><label>时间</label><input id="q-time" type="time" value="'+pad(d.getHours())+":"+pad(d.getMinutes())+'"></div></div>'
+    +'<div class="field"><label>备注（可选）</label><input id="q-note" placeholder="例如：下午班次"></div>'
+    +'<button class="btn primary" data-act="save-quick" data-id="'+cid+'">记录</button>'
+    +'<button class="btn ghost" data-act="close-sheet">取消</button>');
+}
+function openEntryEditor(id){
+  var e=state.entries.find(function(x){ return x.id===id; }); if(!e) return;
+  var c=counter(e.counterId), t=new Date(e.ts);
+  showSheet("编辑记录",
+     '<div class="set-note">计数器：'+esc(c?c.name:"已删除")+'</div>'
+    +'<div class="field"><label>增量</label><input id="q-delta" type="number" step="any" value="'+e.delta+'"></div>'
+    +'<div class="frow"><div class="field"><label>日期</label><input id="q-date" type="date" value="'+e.localDate+'"></div>'
+    +'<div class="field"><label>时间</label><input id="q-time" type="time" value="'+pad(t.getHours())+":"+pad(t.getMinutes())+'"></div></div>'
+    +'<div class="field"><label>备注</label><input id="q-note" value="'+esc(e.note)+'" placeholder="可选"></div>'
+    +'<button class="btn primary" data-act="save-entry" data-id="'+e.id+'">保存修改</button>'
+    +'<button class="btn danger" data-act="del-entry" data-id="'+e.id+'">删除这条记录</button>'
+    +'<button class="btn ghost" data-act="close-sheet">取消</button>');
+}
+function openSettings(){
+  var s=state.settings;
+  var sw=function(k,on){ return '<button class="switch '+(on?"on":"")+'" data-act="toggle" data-key="'+k+'"></button>'; };
+  showSheet("设置",
+     '<div class="set-row"><span>深色模式</span>'+sw("theme",s.theme==="dark")+'</div>'
+    +'<div class="set-row"><span>点击音效</span>'+sw("sound",s.sound)+'</div>'
+    +'<div class="set-row"><span>震动反馈</span>'+sw("haptic",s.haptic)+'</div>'
+    +'<div class="set-row"><span>每周起始日</span><button class="pill" data-act="toggle-weekstart" style="height:32px;font-size:13px">'+(s.weekStart===1?"周一":"周日")+'</button></div>'
+    +'<div class="set-row"><span>计数模式</span><button class="pill" data-act="toggle-mode" style="height:32px;font-size:13px">'+(s.mode==="daily"?"每日重置":"累计不清零")+'</button></div>'
+    +'<div class="set-note">每日重置：首页数字为所选日期当日合计；累计不清零：显示从初始值累加到该日的总数。两套口径下历史记录的结果值会自动重算。</div>'
+    +'<div class="set-row"><span>导出 CSV 流水</span><button class="pill" data-act="export-csv" style="height:32px;font-size:13px">导出</button></div>'
+    +'<div class="set-row"><span>备份 / 恢复（JSON）</span><button class="pill" data-act="export-json" style="height:32px;font-size:13px">备份</button></div>'
+    +'<div class="set-row"><span>导入备份</span><button class="pill" data-act="import-json" style="height:32px;font-size:13px">导入</button></div>'
+    +'<div class="set-row"><span>清空所有数据</span><button class="pill" data-act="clear-all" style="height:32px;font-size:13px;color:#D6453D">清空</button></div>'
+    +'<div class="set-note" style="border-top:1px solid var(--line);margin-top:12px;padding-top:14px">原生安卓版将提供：桌面小组件一键计数、定时提醒通知、音量键计数、自动云备份、CSV 分享。本原型仅验证交互与统计口径。</div>'
+    +'<button class="btn ghost" data-act="close-sheet">关闭</button>');
+}
+function openMore(){
+  showSheet("更多",
+     '<div class="menu-item" data-act="undo"><span class="mi-ic">&#8630;</span>撤销上一次计数</div>'
+    +'<div class="menu-item" data-act="open-date-jump"><span class="mi-ic">&#128197;</span>跳转到日期</div>'
+    +'<div class="menu-item" data-act="open-categories"><span class="mi-ic">&#9776;</span>切换分类筛选</div>'
+    +'<div class="menu-item" data-act="export-csv"><span class="mi-ic">&#8681;</span>导出 CSV</div>'
+    +'<div class="menu-item" data-act="export-json"><span class="mi-ic">&#8681;</span>备份 JSON</div>'
+    +'<div class="menu-item" data-act="open-settings"><span class="mi-ic">&#9881;</span>设置</div>'
+    +'<button class="btn ghost" data-act="close-sheet">关闭</button>');
+}
+function openCategories(){
+  var items=['<div class="menu-item" data-act="pick-cat" data-cat="all"><span class="mi-ic">&#9635;</span>全部 '+(ui.filter==="all"?"&#10003;":"")+'</div>'];
+  state.categories.forEach(function(x){
+    items.push('<div class="menu-item" data-act="pick-cat" data-cat="'+esc(x)+'"><span class="mi-ic">&#9634;</span>'+esc(x)+' '+(ui.filter===x?"&#10003;":"")+'</div>');
+  });
+  showSheet("分类筛选",items.join('')+'<button class="btn ghost" data-act="close-sheet">关闭</button>');
+}
+function openDateJump(){
+  showSheet("跳转到日期",
+     '<div class="field"><label>选择日期</label><input id="j-date" type="date" value="'+ui.date+'"></div>'
+    +'<button class="btn primary" data-act="save-jump">跳转</button>'
+    +'<button class="btn ghost" data-act="close-sheet">取消</button>');
+}
+function openPeriodPick(){
+  var a=ui.anchor, opts="";
+  for(var y=a.getFullYear()-3;y<=a.getFullYear()+1;y++){
+    for(var m=1;m<=12;m++){
+      var v=y+"-"+pad(m);
+      opts+='<option value="'+v+'" '+((y===a.getFullYear()&&m===a.getMonth()+1)?"selected":"")+'>'+y+'年'+m+'月</option>';
+    }
+  }
+  showSheet("选择统计周期",
+     '<div class="field"><label>年月</label><select id="p-month">'+opts+'</select></div>'
+    +'<button class="btn primary" data-act="save-period">确定</button>'
+    +'<button class="btn ghost" data-act="close-sheet">取消</button>');
+}
+function download(name,text,type){
+  var blob=new Blob(["\ufeff"+text],{type:type||"text/plain;charset=utf-8"});
+  var a=document.createElement("a"), url=URL.createObjectURL(blob);
+  a.href=url; a.download=name; document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); },300);
+}
+function exportCSV(){
+  var rows=[["日期","时间","计数器","分类","增量","结果值","备注"]];
+  sortEntries(state.entries).forEach(function(e){
+    var c=counter(e.counterId), t=new Date(e.ts);
+    rows.push([e.localDate,pad(t.getHours())+":"+pad(t.getMinutes()),c?c.name:"已删除",c?c.category:"",e.delta,e.valueAfter,e.note||""]);
+  });
+  var csv=rows.map(function(r){ return r.map(function(x){ return '"'+String(x).replace(/"/g,'""')+'"'; }).join(","); }).join("\r\n");
+  download("计数器流水_"+ymd(new Date())+".csv",csv,"text/csv;charset=utf-8");
+  toast("CSV 已导出");
+}
+function exportJSON(){
+  download("计数器备份_"+ymd(new Date())+".json",JSON.stringify(state,null,2),"application/json;charset=utf-8");
+  toast("备份已导出");
+}
+function shiftPeriod(dir){
+  var d=ui.dim;
+  if(d==="day") ui.anchor=addDays(ui.anchor,dir);
+  else if(d==="week") ui.anchor=addDays(ui.anchor,dir*7);
+  else if(d==="month") ui.anchor=addMonths(ui.anchor,dir);
+  else if(d==="year") ui.anchor=new Date(ui.anchor.getFullYear()+dir,ui.anchor.getMonth(),1);
+  else ui.anchor=addMonths(ui.anchor,dir*12);
+  renderStats();
+}
+
+document.addEventListener("click",function(ev){
+  var el=ev.target.closest("[data-act]"); if(!el) return;
+  var act=el.dataset.act, id=el.dataset.id;
+  if(act==="close-sheet"){ closeSheet(); return; }
+  if(act==="tab"){ ui.tab=el.dataset.tab; renderAll(); $("#screen").scrollTop=0; return; }
+  if(act==="pick-date"){ ui.date=el.dataset.date; ui.anchor=parseYmd(ui.date); renderAll(); return; }
+  if(act==="week-prev"||act==="week-next"){ ui.date=ymd(addDays(parseYmd(ui.date),act==="week-prev"?-7:7)); renderAll(); return; }
+  if(act==="inc"){ addEntry(id,Number(el.dataset.delta),new Date(parseYmd(ui.date).getFullYear(),parseYmd(ui.date).getMonth(),parseYmd(ui.date).getDate(),new Date().getHours(),new Date().getMinutes(),new Date().getSeconds()).getTime(),""); return; }
+  if(act==="quick-log"){ openQuickLog(id); return; }
+  if(act==="add-counter"){ openCounterEditor(null); return; }
+  if(act==="pick-color"){
+    ui.formColor=el.dataset.color; $("#f-color").value=ui.formColor;
+    $$("#colorRow .color").forEach(function(b){ b.classList.toggle("sel",b.dataset.color===ui.formColor); });
+    return;
+  }
+  if(act==="save-counter"){
+    var name=val("f-name").trim(); if(!name){ toast("请填写名称"); return; }
+    var cat=val("f-cat");
+    if(cat==="__new"){
+      cat=window.prompt("新分类名称","新分类"); if(!cat||!cat.trim()){ return; }
+      cat=cat.trim(); if(state.categories.indexOf(cat)<0) state.categories.push(cat);
+    }
+    var data={name:name,icon:val("f-icon").trim(),step:Number(val("f-step"))||1,initial:Number(val("f-initial"))||0,
+      target:Number(val("f-target"))||0,category:cat,color:val("f-color")||PALETTE[0]};
+    if(id){ Object.assign(counter(id),data); }
+    else{ state.counters.push(Object.assign({id:uid("c"),archived:false,createdAt:Date.now()},data)); }
+    recalcAll(); save(); closeSheet(); renderAll(); toast(id?"已保存":"已新增计数器"); return;
+  }
+  if(act==="delete-counter"){
+    if(!window.confirm("删除该计数器？其历史记录也会一并删除。")) return;
+    state.counters=state.counters.filter(function(c){ return c.id!==id; });
+    state.entries=state.entries.filter(function(e){ return e.counterId!==id; });
+    save(); closeSheet(); renderAll(); toast("已删除"); return;
+  }
+  if(act==="save-quick"){
+    var dv=Number(val("q-delta")); if(!dv){ toast("增量不能为 0"); return; }
+    var ds=val("q-date")||ui.date, tm=val("q-time")||"12:00";
+    var dt=new Date(parseYmd(ds).getFullYear(),parseYmd(ds).getMonth(),parseYmd(ds).getDate(),Number(tm.slice(0,2)),Number(tm.slice(3,5)),0);
+    ui.date=ds; closeSheet(); addEntry(id,dv,dt.getTime(),val("q-note").trim()); return;
+  }
+  if(act==="edit-entry"){ ev.stopPropagation(); openEntryEditor(id); return; }
+  if(act==="del-entry"){
+    ev.stopPropagation(); if(!window.confirm("删除这条记录？")) return;
+    closeSheet(); deleteEntry(id); return;
+  }
+  if(act==="save-entry"){
+    var e=state.entries.find(function(x){ return x.id===id; }); if(!e) return;
+    var nd=Number(val("q-delta")); if(!nd){ toast("增量不能为 0"); return; }
+    var d2=val("q-date"), t2=val("q-time");
+    if(d2) e.localDate=d2;
+    e.ts=new Date(parseYmd(d2||e.localDate).getFullYear(),parseYmd(d2||e.localDate).getMonth(),parseYmd(d2||e.localDate).getDate(),Number((t2||"12:00").slice(0,2)),Number((t2||"12:00").slice(3,5)),0).getTime();
+    e.delta=nd; e.note=val("q-note").trim();
+    recalc(e.counterId); save(); closeSheet(); renderAll(); toast("已保存修改"); return;
+  }
+  if(act==="undo"){ closeSheet(); undoLast(); return; }
+  if(act==="open-settings"){ openSettings(); return; }
+  if(act==="open-more"){ openMore(); return; }
+  if(act==="open-categories"){ openCategories(); return; }
+  if(act==="pick-cat"){ ui.filter=el.dataset.cat; closeSheet(); renderAll(); return; }
+  if(act==="open-date-jump"){ openDateJump(); return; }
+  if(act==="save-jump"){ ui.date=val("j-date")||ui.date; ui.anchor=parseYmd(ui.date); closeSheet(); renderAll(); return; }
+  if(act==="toggle"){
+    var k=el.dataset.key, s=state.settings;
+    if(k==="theme") s.theme=s.theme==="dark"?"light":"dark";
+    else s[k]=!s[k];
+    save(); openSettings(); renderAll(); return;
+  }
+  if(act==="toggle-weekstart"){ state.settings.weekStart=state.settings.weekStart===1?0:1; save(); openSettings(); renderAll(); return; }
+  if(act==="toggle-mode"){ state.settings.mode=state.settings.mode==="daily"?"total":"daily"; recalcAll(); save(); openSettings(); renderAll(); return; }
+  if(act==="export-csv"){ closeSheet(); exportCSV(); return; }
+  if(act==="export-json"){ closeSheet(); exportJSON(); return; }
+  if(act==="import-json"){ closeSheet(); $("#fileInput").click(); return; }
+  if(act==="clear-all"){
+    if(!window.confirm("清空所有计数器和记录？此操作不可撤销。")) return;
+    state.counters=[]; state.entries=[]; save(); closeSheet(); renderAll(); toast("已清空"); return;
+  }
+  if(act==="pro"){ toast("原型不含内购 / 会员功能"); return; }
+  if(act==="dim"){ ui.dim=el.dataset.dim; renderStats(); return; }
+  if(act==="view"){ ui.view=el.dataset.view; renderStats(); return; }
+  if(act==="period-prev"){ shiftPeriod(-1); return; }
+  if(act==="period-next"){ shiftPeriod(1); return; }
+  if(act==="period-pick"){ openPeriodPick(); return; }
+  if(act==="save-period"){
+    var pm=val("p-month").split("-"); ui.anchor=new Date(Number(pm[0]),Number(pm[1])-1,1);
+    closeSheet(); renderStats(); return;
+  }
+});
+
+$("#homeSearch").addEventListener("input",function(e){ ui.search=e.target.value.trim(); renderHome(); renderStats(); });
+$("#fileInput").addEventListener("change",function(e){
+  var f=e.target.files[0]; if(!f) return;
+  var r=new FileReader();
+  r.onload=function(){
+    try{
+      var o=JSON.parse(r.result);
+      if(!o||!Array.isArray(o.counters)||!Array.isArray(o.entries)) throw new Error("bad");
+      state=o; if(!state.settings) state.settings=seed().settings;
+      recalcAll(); save(); renderAll(); toast("备份已恢复");
+    }catch(err){ toast("文件格式不正确"); }
+  };
+  r.readAsText(f); e.target.value="";
+});
+$("#weekstrip").addEventListener("wheel",function(e){
+  e.preventDefault(); ui.date=ymd(addDays(parseYmd(ui.date),(e.deltaY+e.deltaX)>0?7:-7)); renderAll();
+},{passive:false});
+
+var swipeStart=null;
+$("#screen").addEventListener("touchstart",function(e){
+  var card=e.target.closest(".entry"); if(!card){ swipeStart=null; return; }
+  swipeStart={x:e.touches[0].clientX,y:e.touches[0].clientY,el:card};
+},{passive:true});
+$("#screen").addEventListener("touchend",function(e){
+  if(!swipeStart) return;
+  var t=e.changedTouches[0], dx=t.clientX-swipeStart.x, dy=t.clientY-swipeStart.y;
+  if(Math.abs(dx)>45 && Math.abs(dx)>Math.abs(dy)*1.3){
+    swipeStart.el.classList.toggle("swiped",dx<0);
+    if(dx<0) e.preventDefault();
+  }
+  swipeStart=null;
+},{passive:false});
+
+function tickClock(){ var d=new Date(); $("#clock").textContent=pad(d.getHours())+":"+pad(d.getMinutes()); }
+tickClock(); setInterval(tickClock,30000);
+recalcAll(); renderAll();
+</script>
+</body>
+</html>

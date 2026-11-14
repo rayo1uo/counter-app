@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">计数器</string>
+    <string name="widget_label">今日总计</string>
+    <string name="widget_add">+1</string>
+    <string name="notification_title">该记一笔了</string>
+    <string name="notification_body">点开计数器，把今天的事记下来</string>
+</resources>

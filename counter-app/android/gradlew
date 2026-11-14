@@ -1,0 +1,10 @@
+#!/bin/sh
+# Minimal launcher. Android Studio or `gradle wrapper --gradle-version 8.7`
+# regenerates this file together with gradle/wrapper/gradle-wrapper.jar.
+DIR="$(cd "$(dirname "$0")" && pwd)"
+JAR="$DIR/gradle/wrapper/gradle-wrapper.jar"
+if [ ! -f "$JAR" ]; then
+  echo "gradle-wrapper.jar missing. Run: gradle wrapper --gradle-version 8.7" >&2
+  exit 1
+fi
+exec java -classpath "$JAR" org.gradle.wrapper.GradleWrapperMain "$@"
