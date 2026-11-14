@@ -35,7 +35,7 @@ private sealed class ScreenDialog {
     data class EditCounter(val id: String) : ScreenDialog()
     data class ConfirmDeleteCounter(val id: String, val name: String) : ScreenDialog()
     data class ConfirmDeleteCategory(val name: String) : ScreenDialog()
-    data class QuickLog(val id: String) : ScreenDialog()
+    data class QuickLog(val id: String, val step: Double) : ScreenDialog()
     data class EditEntry(val id: String) : ScreenDialog()
     object Settings : ScreenDialog()
     object More : ScreenDialog()
@@ -132,7 +132,7 @@ fun CounterRoot(vm: CounterViewModel) {
                     onOpenSettings = { dialog = ScreenDialog.Settings },
                     onOpenCategories = { dialog = ScreenDialog.Categories },
                     onEditCounter = { dialog = ScreenDialog.EditCounter(it.id) },
-                    onQuickLog = { dialog = ScreenDialog.QuickLog(it.id) },
+                    onQuickLog = { dialog = ScreenDialog.QuickLog(it.id, it.step) },
                     inlineSummary = !wide
                 )
 
@@ -237,7 +237,7 @@ fun CounterRoot(vm: CounterViewModel) {
             val counter = ui.counters.firstOrNull { it.id == current.id }
             if (counter != null) {
                 QuickLogDialog(
-                    counter = counter,
+                    counter = counter.copy(step = current.step),
                     initialDate = ui.selectedDate,
                     onDismiss = close,
                     onSave = { delta, date, hour, minute, note ->

@@ -145,7 +145,7 @@ fun HomeScreen(
             }
         )
 
-        counters.forEach { counter ->
+        val renderCard: @Composable (CounterEntity) -> Unit = { counter ->
             val value = StatsCalculator.dayValue(
                 ui.entries, counter.id, ui.selectedDate,
                 ui.settings.countMode, counter.initialValue
@@ -165,6 +165,21 @@ fun HomeScreen(
                 cumulative = counter.initialValue + ui.entries.filter { it.counterId == counter.id && it.localDate <= ui.selectedDate }.sumOf { it.delta },
                 onPin = { vm.pin(counter) }, onMove = { vm.move(counter, it) }
             )
+        }
+
+        androidx.compose.foundation.layout.BoxWithConstraints {
+            val columns = if (maxWidth >= 680.dp) 2 else 1
+            Column {
+                counters.chunked(columns).forEach { row ->
+                    Row {
+                        row.forEachIndexed { index, counter ->
+                            if (index > 0) Spacer(Modifier.width(16.dp))
+                            Box(Modifier.weight(1f)) { renderCard(counter) }
+                        }
+                        if (row.size < columns) { Spacer(Modifier.width(16.dp)); Spacer(Modifier.weight(1f)) }
+                    }
+                }
+            }
         }
 
         if (counters.isEmpty()) {
