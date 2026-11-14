@@ -21,7 +21,7 @@ object WidgetUpdater {
             val ids = manager.getAppWidgetIds(
                 ComponentName(context, CounterWidget::class.java)
             )
-            ids.forEach { id -> CounterWidget.render(context, manager, id, total) }
+            ids.forEach { id -> CounterWidget.render(context, manager, id, total, target?.name ?: "暂无计数器", target?.step ?: 1.0) }
         }
     }
 }

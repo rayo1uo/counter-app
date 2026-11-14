@@ -48,7 +48,7 @@ import com.example.counter.domain.TimeUtils
 import java.time.LocalDate
 import java.util.UUID
 
-private fun pickDate(context: Context, initial: LocalDate, onPick: (LocalDate) -> Unit) {
+internal fun pickDate(context: Context, initial: LocalDate, onPick: (LocalDate) -> Unit) {
     DatePickerDialog(
         context,
         { _, year, month, day -> onPick(LocalDate.of(year, month + 1, day)) },

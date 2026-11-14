@@ -4,9 +4,9 @@ import org.json.JSONArray
 import java.util.UUID
 import com.example.counter.domain.TimeUtils
 
-data class Backup(val counters: List<CounterEntity>, val entries: List<EntryEntity>, val categories: List<CategoryEntity>)
+data class Backup(val counters: List<CounterEntity>, val entries: List<EntryEntity>, val categories: List<CategoryEntity>, val settings: AppSettings? = null)
 object BackupCodec {
-    fun encode(counters: List<CounterEntity>, entries: List<EntryEntity>, categories: List<CategoryEntity>): String {
+    fun encode(counters: List<CounterEntity>, entries: List<EntryEntity>, categories: List<CategoryEntity>, settings: AppSettings? = null): String {
         val root = JSONObject()
         val countersArray = JSONArray()
         counters.forEach { c ->
@@ -33,6 +33,13 @@ object BackupCodec {
                 put("name", c.name); put("sortOrder", c.sortOrder); put("color", c.color)
             })
         }
+        if (settings != null) root.put("settings", JSONObject().apply {
+            put("darkTheme", settings.darkTheme); put("compact", settings.compact); put("confirmCount", settings.confirmCount)
+            put("sound", settings.sound); put("haptic", settings.haptic); put("countMode", settings.countMode.name)
+            put("weekStartMonday", settings.weekStartMonday); put("volumeCountEnabled", settings.volumeCountEnabled)
+            put("volumeCounterId", settings.volumeCounterId); put("reminderEnabled", settings.reminderEnabled)
+            put("reminderHour", settings.reminderHour); put("reminderMinute", settings.reminderMinute)
+        })
         root.put("version", 1)
         root.put("counters", countersArray)
         root.put("entries", entriesArray)
@@ -91,6 +98,14 @@ object BackupCodec {
             val ids = counters.map { it.id }.toSet()
             counters.forEach { require(it.id.isNotBlank() && it.name.isNotBlank() && it.step.isFinite() && it.step > 0 && it.initialValue.isFinite() && it.target.isFinite() && it.target >= 0) }
             entries.forEach { require(it.counterId in ids && it.delta.isFinite() && it.delta != 0.0); TimeUtils.parse(it.localDate); require(it.localDate == TimeUtils.ymdOfEpoch(it.occurredAt)) }
-            return Backup(counters, entries, categories)
+            val prefs = root.optJSONObject("settings")?.let { o ->
+                AppSettings(darkTheme=o.optBoolean("darkTheme", false), compact=o.optBoolean("compact", true),
+                    confirmCount=o.optBoolean("confirmCount", false), sound=o.optBoolean("sound", true), haptic=o.optBoolean("haptic", true),
+                    countMode=CountMode.valueOf(o.optString("countMode", "DAILY")), weekStartMonday=o.optBoolean("weekStartMonday", false),
+                    volumeCountEnabled=o.optBoolean("volumeCountEnabled", false), volumeCounterId=o.optString("volumeCounterId", ""),
+                    reminderEnabled=o.optBoolean("reminderEnabled", false), reminderHour=o.optInt("reminderHour", 20), reminderMinute=o.optInt("reminderMinute", 0))
+            }
+            require(prefs == null || (prefs.reminderHour in 0..23 && prefs.reminderMinute in 0..59))
+            return Backup(counters, entries, categories, prefs)
     }
 }

@@ -59,7 +59,10 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         viewModelScope.launch {
-            dao.observeCounters().collect { value -> _ui.value = _ui.value.copy(counters = value) }
+            dao.observeCounters().collect { value ->
+                _ui.value = _ui.value.copy(counters = value)
+                WidgetUpdater.updateAll(getApplication<Application>())
+            }
         }
         viewModelScope.launch {
             dao.observeEntries().collect { value ->
@@ -289,13 +292,14 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
                 (listOf(csv(date)) + counters.map { c -> formatNumber(rows.filter { it.counterId == c.id }.sumOf { it.delta }) } + formatNumber(rows.sumOf { it.delta })).joinToString(",")
             }
     }
-    fun exportJson(): String = com.example.counter.data.BackupCodec.encode(_ui.value.counters, _ui.value.entries, _ui.value.categories)
+    fun exportJson(): String = com.example.counter.data.BackupCodec.encode(_ui.value.counters, _ui.value.entries, _ui.value.categories, _ui.value.settings)
 
     fun importJson(text: String, onResult: (Boolean) -> Unit) {
         viewModelScope.launch {
             val result = runCatching {
                 val backup = com.example.counter.data.BackupCodec.decode(text)
                 repo.replaceAll(backup.counters, backup.entries, backup.categories)
+                backup.settings?.let { s -> settingsRepo.restore(s); repo.recalcAll(); ReminderScheduler.schedule(getApplication<Application>(), s.reminderEnabled, s.reminderHour, s.reminderMinute) }
             }
             onResult(result.isSuccess)
         }

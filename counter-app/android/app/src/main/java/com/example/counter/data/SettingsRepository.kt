@@ -65,6 +65,15 @@ class SettingsRepository(private val context: Context) {
         )
     }
 
+    suspend fun restore(s: AppSettings) {
+        context.counterDataStore.edit {
+            it[Keys.DARK]=s.darkTheme; it[Keys.COMPACT]=s.compact; it[Keys.CONFIRM]=s.confirmCount
+            it[Keys.SOUND]=s.sound; it[Keys.HAPTIC]=s.haptic; it[Keys.WEEK_MONDAY]=s.weekStartMonday
+            it[Keys.MODE]=if (s.countMode == CountMode.TOTAL) "total" else "daily"
+            it[Keys.REMINDER_ON]=s.reminderEnabled; it[Keys.REMINDER_HOUR]=s.reminderHour; it[Keys.REMINDER_MINUTE]=s.reminderMinute
+            it[Keys.VOLUME_ON]=s.volumeCountEnabled; it[Keys.VOLUME_ID]=s.volumeCounterId
+        }
+    }
     suspend fun setCompact(value: Boolean) { context.counterDataStore.edit { it[Keys.COMPACT] = value } }
     suspend fun setConfirmCount(value: Boolean) { context.counterDataStore.edit { it[Keys.CONFIRM] = value } }
 
