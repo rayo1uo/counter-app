@@ -48,7 +48,7 @@ fun HistoryScreen(
             (ui.search.isBlank() || (names[entry.counterId]?.name ?: "").contains(ui.search, ignoreCase = true))
     }.sortedWith(
         compareByDescending<EntryEntity> { it.occurredAt }
-            .thenByDescending { it.createdAt }
+            .thenByDescending { it.createdAt }.thenByDescending { it.id }
     )
     var collapsed by remember { mutableStateOf(setOf<String>()) }
     val groups = entries.groupBy { it.localDate }.toList().sortedByDescending { it.first }

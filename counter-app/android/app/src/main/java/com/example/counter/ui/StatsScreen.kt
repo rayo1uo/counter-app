@@ -71,7 +71,7 @@ fun StatsScreen(
             val last = minOf(date.plusDays(stride - 1), end)
             com.example.counter.domain.Bucket(date.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli(), last.plusDays(1).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() - 1, i % 5 == 0, "${date.monthValue}/${date.dayOfMonth}")
         }.toList()
-        standardPeriod.copy(start = buckets.first().start, end = buckets.last().end, label = "${ui.rangeStart} ~ ${ui.rangeEnd}", buckets = buckets)
+        standardPeriod.copy(start = buckets.first().start, end = buckets.last().end, label = "${ui.rangeStart} ~ ${ui.rangeEnd}", buckets = buckets, calendarMonth = java.time.YearMonth.from(end))
     } else standardPeriod
     val entries = StatsCalculator.filterEntries(ui.entries, period, ids)
     val summary = StatsCalculator.summarize(entries, counters)
@@ -175,9 +175,9 @@ fun StatsScreen(
                     } else null
                 }
                 StatCard(dark) {
-                    Text("各计数器占比", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = textColor(dark))
+                    Text("正净增量占比", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = textColor(dark))
                     Text(
-                        "${period.label} · 总计 ${formatNumber(summary.total)}",
+                        "${period.label} · 仅统计净增量大于 0 的计数器",
                         fontSize = 12.sp,
                         color = AppColors.Muted
                     )

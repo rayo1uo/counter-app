@@ -372,6 +372,7 @@ fun SettingsDialog(
                 SettingRow("导出每日汇总 CSV") { TextButton(onClick = onExportDailyCsv) { Text("导出") } }
                 Text("每次修改后自动保存本地备份；导出 JSON 可另存到其他设备。", fontSize = 11.sp, color = AppColors.Muted)
                 SettingRow("恢复自动备份") { TextButton(onClick = { vm.restoreAutomatic { ok -> android.widget.Toast.makeText(context, if (ok) "已恢复自动备份" else "暂无可恢复的自动备份", android.widget.Toast.LENGTH_SHORT).show() } }) { Text("恢复") } }
+                SettingRow("恢复删除 / 导入前数据") { TextButton(onClick = { vm.restoreAutomatic(true) { ok -> android.widget.Toast.makeText(context, if (ok) "已恢复操作前的数据" else "暂无操作前备份", android.widget.Toast.LENGTH_SHORT).show() } }) { Text("恢复") } }
                 SettingRow("备份 JSON") { TextButton(onClick = onExportJson) { Text("备份") } }
                 SettingRow("导入备份") { TextButton(onClick = onImportJson) { Text("导入") } }
                 SettingRow("清空所有数据") {

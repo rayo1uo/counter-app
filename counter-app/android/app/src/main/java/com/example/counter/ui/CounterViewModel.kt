@@ -59,6 +59,15 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         viewModelScope.launch {
+            var today = TimeUtils.todayYmd()
+            while (true) {
+                kotlinx.coroutines.delay(30_000)
+                val next = TimeUtils.todayYmd()
+                if (next != today && _ui.value.selectedDate == today) update { it.copy(selectedDate = next, anchor = TimeUtils.parse(next)) }
+                today = next
+            }
+        }
+        viewModelScope.launch {
             dao.observeCounters().collect { value ->
                 _ui.value = _ui.value.copy(counters = value)
                 WidgetUpdater.updateAll(getApplication<Application>())
@@ -103,8 +112,8 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
     }
     val events = kotlinx.coroutines.channels.Channel<com.example.counter.data.EntryEntity>(kotlinx.coroutines.channels.Channel.UNLIMITED)
     fun undoEntry(entry: EntryEntity) = viewModelScope.launch { repo.deleteEntry(entry) }
-    fun restoreAutomatic(onResult: (Boolean) -> Unit) = viewModelScope.launch {
-        onResult(runCatching { repo.restoreAutomatic() }.getOrDefault(false))
+    fun restoreAutomatic(recovery: Boolean = false, onResult: (Boolean) -> Unit) = viewModelScope.launch {
+        onResult(runCatching { repo.restoreAutomatic(recovery) }.getOrDefault(false))
     }
     fun setSearch(text: String) = update { it.copy(search = text) }
 

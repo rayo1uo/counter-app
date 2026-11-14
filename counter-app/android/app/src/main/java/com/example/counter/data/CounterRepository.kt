@@ -24,7 +24,7 @@ class CounterRepository(
             localDate = TimeUtils.ymdOfEpoch(occurredAt),
             tzOffsetSeconds = TimeUtils.offsetSeconds(occurredAt),
             note = note,
-            createdAt = System.currentTimeMillis()
+            createdAt = maxOf(System.currentTimeMillis(), dao.latestEntryCreatedAt() + 1)
         )
         dao.upsertEntry(entry)
         recalc(counterId)
@@ -63,9 +63,10 @@ class CounterRepository(
         recalc(entry.counterId)
     }
 
-    suspend fun undoLast() {
-        val last = dao.allEntries().maxByOrNull { it.createdAt } ?: return
-        deleteEntry(last)
+    suspend fun undoLast() = mutate {
+        dao.allEntries().maxByOrNull { it.createdAt }?.let {
+            dao.deleteEntry(it); recalc(it.counterId)
+        }
     }
 
     suspend fun upsertCounter(counter: CounterEntity) = mutate {
@@ -76,10 +77,11 @@ class CounterRepository(
     }
 
     suspend fun deleteCounter(id: String) = mutate {
+        protectRecovery()
         dao.deleteCounterById(id)
     }
 
-    suspend fun addCategory(name: String) {
+    suspend fun addCategory(name: String) = mutate {
         dao.addCategory(CategoryEntity(name = name, sortOrder = 999))
     }
 
@@ -91,6 +93,7 @@ class CounterRepository(
     }
 
     suspend fun clearAll() = mutate {
+        protectRecovery()
         dao.clearEntries()
         dao.clearCounters()
         dao.clearCategories()
@@ -101,6 +104,7 @@ class CounterRepository(
         entries: List<EntryEntity>,
         categories: List<CategoryEntity>
     ) = mutate {
+        protectRecovery()
         dao.clearEntries()
         dao.clearCounters()
         dao.clearCategories()
@@ -118,7 +122,7 @@ class CounterRepository(
                 val stream = file.startWrite()
                 try {
                     stream.write(BackupCodec.encode(dao.allCounters(), dao.allEntries(),
-                        dao.observeCategories().first()).toByteArray(Charsets.UTF_8))
+                        dao.observeCategories().first(), settings.settings.first()).toByteArray(Charsets.UTF_8))
                     file.finishWrite(stream)
                 } catch (e: Exception) { file.failWrite(stream); throw e }
             }
@@ -126,8 +130,18 @@ class CounterRepository(
         return result
     }
 
-    suspend fun restoreAutomatic(): Boolean {
-        val file = File(context.filesDir, "automatic-backup.json")
+    private suspend fun protectRecovery() {
+        if (dao.counterCount() == 0) return
+        val file = android.util.AtomicFile(File(context.filesDir, "recovery-backup.json"))
+        val stream = file.startWrite()
+        try {
+            stream.write(BackupCodec.encode(dao.allCounters(), dao.allEntries(), dao.observeCategories().first(), settings.settings.first()).toByteArray(Charsets.UTF_8))
+            file.finishWrite(stream)
+        } catch (e: Exception) { file.failWrite(stream); throw e }
+    }
+
+    suspend fun restoreAutomatic(recovery: Boolean = false): Boolean {
+        val file = File(context.filesDir, if (recovery) "recovery-backup.json" else "automatic-backup.json")
         if (!file.exists()) return false
         val backup = BackupCodec.decode(file.readText())
         replaceAll(backup.counters, backup.entries, backup.categories)

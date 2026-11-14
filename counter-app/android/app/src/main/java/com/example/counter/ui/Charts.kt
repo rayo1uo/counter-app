@@ -46,7 +46,7 @@ fun BarChart(
     val peak = values.maxOf { Math.abs(it) }.coerceAtLeast(0.0)
     var top = Math.max(1.0, Math.ceil(peak))
     if (top > 3.0) top = Math.ceil(top / 3.0) * 3.0
-    val lines = if (top <= 1.0) 1 else 3
+    val lines = if (values.any { it < 0 }) 4 else if (top <= 1.0) 1 else 3
     val gridColor = lineColor(dark)
     val negativeColor = AppColors.Danger
     val signed = values.any { it < 0 }

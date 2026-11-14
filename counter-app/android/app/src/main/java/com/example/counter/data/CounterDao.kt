@@ -33,6 +33,9 @@ interface CounterDao {
     )
     suspend fun entriesOf(counterId: String): List<EntryEntity>
 
+    @Query("SELECT COALESCE(MAX(createdAt), 0) FROM entries")
+    suspend fun latestEntryCreatedAt(): Long
+
     @Query("SELECT COUNT(*) FROM counters")
     suspend fun counterCount(): Int
 
