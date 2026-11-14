@@ -171,6 +171,11 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { repo.addCategory(name) }
     }
 
+    fun deleteCategory(name: String) {
+        viewModelScope.launch { repo.deleteCategory(name) }
+        if (_ui.value.filterCategory == name) setFilter("all")
+    }
+
     fun setDark(value: Boolean) = viewModelScope.launch { settingsRepo.setDark(value) }
     fun setSound(value: Boolean) = viewModelScope.launch { settingsRepo.setSound(value) }
     fun setHaptic(value: Boolean) = viewModelScope.launch { settingsRepo.setHaptic(value) }
@@ -192,11 +197,11 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
     fun volumeIncrement() {
         val state = _ui.value
         if (!state.settings.volumeCountEnabled) return
-        val id = state.settings.volumeCounterId.ifEmpty {
-            state.counters.firstOrNull()?.id ?: return
-        }
-        val step = state.counters.firstOrNull { it.id == id }?.step ?: 1.0
-        addCount(id, step)
+        // A stale binding (e.g. its counter was deleted) would violate the FK on insert.
+        val target = state.counters.firstOrNull { it.id == state.settings.volumeCounterId }
+            ?: state.counters.firstOrNull()
+            ?: return
+        addCount(target.id, target.step)
     }
 
     fun clearAll() {
@@ -229,7 +234,12 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
         val builder = StringBuilder()
         builder.append("日期,时间,计数器,分类,增量,结果值,备注\n")
         val names = _ui.value.counters.associateBy { it.id }
-        _ui.value.entries.sortedWith(compareBy({ it.localDate }, { it.occurredAt }))
+        _ui.value.entries
+            .sortedWith(
+                compareBy<EntryEntity>(
+                    { it.localDate }, { it.occurredAt }, { it.createdAt }, { it.id }
+                )
+            )
             .forEach { entry ->
                 val (hour, minute) = TimeUtils.dateTimeParts(entry.occurredAt)
                 val counter = names[entry.counterId]
@@ -237,8 +247,8 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
                     .append(csv(String.format("%02d:%02d", hour, minute))).append(',')
                     .append(csv(counter?.name ?: "已删除")).append(',')
                     .append(csv(counter?.category ?: "")).append(',')
-                    .append(entry.delta).append(',')
-                    .append(entry.valueAfter).append(',')
+                    .append(formatNumber(entry.delta)).append(',')
+                    .append(formatNumber(entry.valueAfter)).append(',')
                     .append(csv(entry.note)).append('\n')
             }
         return builder.toString()

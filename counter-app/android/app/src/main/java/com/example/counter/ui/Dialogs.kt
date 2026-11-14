@@ -110,6 +110,12 @@ fun CounterEditorDialog(
                 }
                 FormField("目标值（0 为不设）", target, { target = it }, true)
                 FormField("分类（可填新名称）", category, { category = it })
+                Text(
+                    "已有分类：${categories.joinToString("、") { it.name }}",
+                    fontSize = 11.sp,
+                    color = AppColors.Muted,
+                    modifier = Modifier.padding(bottom = 10.dp)
+                )
 
                 Text("预设颜色", fontSize = 12.sp, color = AppColors.Muted)
                 Spacer(Modifier.height(8.dp))
@@ -130,8 +136,7 @@ fun CounterEditorDialog(
                         )
                     }
                 }
-                Spacer(Modifier.height(10.dp))
-                Text("当前分类：${categories.joinToString("、") { it.name }}", fontSize = 11.sp, color = AppColors.Muted)
+                Spacer(Modifier.height(8.dp))
                 if (error.isNotEmpty()) Text(error, fontSize = 12.sp, color = AppColors.Danger)
             }
         },
@@ -406,7 +411,8 @@ fun CategoryDialog(
     current: String,
     onDismiss: () -> Unit,
     onPick: (String) -> Unit,
-    onAdd: (String) -> Unit
+    onAdd: (String) -> Unit,
+    onDelete: (String) -> Unit
 ) {
     var newName by remember { mutableStateOf("") }
     AlertDialog(
@@ -419,17 +425,27 @@ fun CategoryDialog(
                     modifier = Modifier.fillMaxWidth()
                 ) { Text(if (current == "all") "全部  ✓" else "全部", modifier = Modifier.fillMaxWidth()) }
                 categories.forEach { category ->
-                    TextButton(
-                        onClick = { onPick(category.name) },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            if (current == category.name) "${category.name}  ✓" else category.name,
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        TextButton(
+                            onClick = { onPick(category.name) },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                if (current == category.name) "${category.name}  ✓" else category.name,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        TextButton(onClick = { onDelete(category.name) }) {
+                            Text("删除", fontSize = 12.sp, color = AppColors.Danger)
+                        }
                     }
                 }
                 FormField("新建分类", newName, { newName = it })
+                Text(
+                    "删除分类后，其下计数器会移到「默认」分类",
+                    fontSize = 11.sp,
+                    color = AppColors.Muted
+                )
                 TextButton(
                     onClick = {
                         if (newName.isNotBlank()) {
@@ -495,6 +511,24 @@ fun PeriodPickDialog(
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("取消") } }
+    )
+}
+
+@Composable
+fun ConfirmActionDialog(
+    title: String,
+    message: String,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = { Text(message) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) { Text("删除", color = AppColors.Danger) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } }
     )
 }
 

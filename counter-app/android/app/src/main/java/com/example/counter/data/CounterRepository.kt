@@ -106,6 +106,13 @@ class CounterRepository(
         dao.addCategory(CategoryEntity(name = name, sortOrder = 999))
     }
 
+    /** Deleting a category must not orphan its counters; move them to the default one. */
+    suspend fun deleteCategory(name: String) {
+        dao.moveCountersToCategory(name, "默认")
+        dao.deleteCategoryByName(name)
+        dao.addCategory(CategoryEntity(name = "默认", sortOrder = 0))
+    }
+
     suspend fun clearAll() {
         dao.clearEntries()
         dao.clearCounters()

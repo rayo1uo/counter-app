@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -37,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.counter.data.CounterEntity
+import com.example.counter.data.CountMode
 import com.example.counter.domain.TimeUtils
 import java.time.LocalDate
 
@@ -50,6 +50,22 @@ fun relativeLabel(minutes: Long): String = when {
     minutes < 60 -> "${minutes}分钟前"
     minutes < 1440 -> "${minutes / 60}小时前"
     else -> "${minutes / 1440}天前"
+}
+
+/** Single source of truth for the home summary, shared by the inline and sticky variants. */
+fun homeSummaryText(ui: UiState, counters: List<CounterEntity>): String {
+    val mode = ui.settings.countMode
+    val ids = counters.map { it.id }.toSet()
+    val scoped = ui.entries.filter { entry ->
+        entry.counterId in ids &&
+            if (mode == CountMode.DAILY) entry.localDate == ui.selectedDate
+            else entry.localDate <= ui.selectedDate
+    }
+    val total = scoped.sumOf { it.delta } +
+        if (mode == CountMode.TOTAL) counters.sumOf { it.initialValue } else 0.0
+    val average = if (counters.isEmpty()) 0.0 else total / counters.size
+    val label = if (mode == CountMode.TOTAL) "累计" else "总计"
+    return "$label：${formatNumber(total)}，项均：${formatNumber(average)}"
 }
 
 @Composable
@@ -70,7 +86,6 @@ fun CircleButton(
 
 @Composable
 fun TopBar(
-    dark: Boolean,
     leading: @Composable () -> Unit,
     center: @Composable () -> Unit,
     trailing: @Composable () -> Unit
@@ -108,7 +123,7 @@ fun WeekStrip(
     val today = TimeUtils.todayYmd()
     val labels = arrayOf("日", "一", "二", "三", "四", "五", "六")
     Row(
-        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
@@ -122,7 +137,7 @@ fun WeekStrip(
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .height(62.dp)
+                    .height(58.dp)
                     .padding(horizontal = 3.dp)
                     .clip(RoundedCornerShape(15.dp))
                     .background(cardBackground(dark))
@@ -170,13 +185,14 @@ fun CounterCard(
     subtitle: String,
     onMinus: () -> Unit,
     onPlus: () -> Unit,
-    onOpen: () -> Unit
+    onOpen: () -> Unit,
+    onEdit: () -> Unit
 ) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(126.dp)
-            .padding(bottom = 12.dp)
+            .height(118.dp)
+            .padding(bottom = 10.dp)
             .clip(RoundedCornerShape(22.dp))
             .background(Color(counter.color.toInt()))
             .clickable(onClick = onOpen)
@@ -224,6 +240,19 @@ fun CounterCard(
                 modifier = Modifier.size(52.dp).clip(CircleShape).clickable(onClick = onPlus),
                 contentAlignment = Alignment.Center
             ) { Text("+", fontSize = 30.sp, color = Color.White) }
+        }
+        // Discoverable entry point for editing / deleting this counter.
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 7.dp, end = 9.dp)
+                .size(30.dp)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.24f))
+                .clickable(onClick = onEdit),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("✎", fontSize = 15.sp, color = Color.White)
         }
     }
 }

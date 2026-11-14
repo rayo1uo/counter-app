@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -204,7 +203,7 @@ fun CalendarView(
                     val date: LocalDate? =
                         if (index in 0 until days) yearMonth.atDay(index + 1) else null
                     if (date == null) {
-                        Box(modifier = Modifier.weight(1f).aspectRatio(1f))
+                        Box(modifier = Modifier.weight(1f).height(44.dp))
                     } else {
                         val key = com.example.counter.domain.TimeUtils.ymd(date)
                         val value = byDay[key] ?: 0.0
@@ -214,7 +213,7 @@ fun CalendarView(
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .aspectRatio(1f)
+                                .height(44.dp)
                                 .padding(2.dp)
                                 .clip(RoundedCornerShape(9.dp))
                                 .background(

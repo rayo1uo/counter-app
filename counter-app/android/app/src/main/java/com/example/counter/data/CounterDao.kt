@@ -25,7 +25,12 @@ interface CounterDao {
     @Query("SELECT * FROM entries")
     suspend fun allEntries(): List<EntryEntity>
 
-    @Query("SELECT * FROM entries WHERE counterId = :counterId ORDER BY localDate ASC, occurredAt ASC, id ASC")
+    // Must match the order used by history/CSV, otherwise same-minute entries get
+    // different result values depending on their random UUID.
+    @Query(
+        "SELECT * FROM entries WHERE counterId = :counterId " +
+            "ORDER BY localDate ASC, occurredAt ASC, createdAt ASC, id ASC"
+    )
     suspend fun entriesOf(counterId: String): List<EntryEntity>
 
     @Query("SELECT COUNT(*) FROM counters")
@@ -48,6 +53,12 @@ interface CounterDao {
 
     @Query("DELETE FROM counters WHERE id = :id")
     suspend fun deleteCounterById(id: String)
+
+    @Query("UPDATE counters SET category = :target WHERE category = :name")
+    suspend fun moveCountersToCategory(name: String, target: String)
+
+    @Query("DELETE FROM categories WHERE name = :name")
+    suspend fun deleteCategoryByName(name: String)
 
     @Query("DELETE FROM entries")
     suspend fun clearEntries()

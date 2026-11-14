@@ -21,7 +21,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,7 +28,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.counter.data.CounterEntity
@@ -43,8 +41,9 @@ fun HomeScreen(
     onOpenMore: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenCategories: () -> Unit,
-    onAddCounter: () -> Unit,
-    onQuickLog: (CounterEntity) -> Unit
+    onEditCounter: (CounterEntity) -> Unit,
+    onQuickLog: (CounterEntity) -> Unit,
+    inlineSummary: Boolean = true
 ) {
     val dark = ui.settings.darkTheme
     val counters = vm.visibleCounters()
@@ -54,10 +53,9 @@ fun HomeScreen(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(start = 18.dp, end = 18.dp, bottom = 130.dp)
+            .padding(start = 18.dp, end = 18.dp, bottom = 16.dp)
     ) {
         TopBar(
-            dark = dark,
             leading = {
                 Box(
                     modifier = Modifier
@@ -74,15 +72,6 @@ fun HomeScreen(
             center = { },
             trailing = {
                 Row {
-                    CircleButton(onClick = { }) {
-                        Icon(
-                            Icons.Default.Star,
-                            contentDescription = "高级功能",
-                            tint = AppColors.Orange,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
                     CircleButton(onClick = onOpenMore) {
                         Icon(
                             Icons.Default.MoreHoriz,
@@ -136,7 +125,7 @@ fun HomeScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         WeekStrip(
             selectedDate = ui.selectedDate,
@@ -165,7 +154,8 @@ fun HomeScreen(
                 subtitle = subtitle,
                 onMinus = { vm.addCount(counter.id, -counter.step) },
                 onPlus = { vm.addCount(counter.id, counter.step) },
-                onOpen = { onQuickLog(counter) }
+                onOpen = { onQuickLog(counter) },
+                onEdit = { onEditCounter(counter) }
             )
         }
 
@@ -178,16 +168,20 @@ fun HomeScreen(
             }
         }
 
-        val ids = counters.map { it.id }.toSet()
-        val total = ui.entries
-            .filter { it.counterId in ids && it.localDate == ui.selectedDate }
-            .sumOf { it.delta }
-        val itemAverage = if (counters.isEmpty()) 0.0 else total / counters.size
-        Text(
-            "总计：${formatNumber(total)}，项均：${formatNumber(itemAverage)}",
-            fontSize = 13.sp,
-            color = AppColors.Muted,
-            modifier = Modifier.padding(top = 6.dp, start = 4.dp)
-        )
+        // On wide screens this is pinned next to the tab bar in CounterRoot instead.
+        if (inlineSummary) {
+            Text(
+                homeSummaryText(ui, counters),
+                fontSize = 13.sp,
+                color = AppColors.Muted,
+                modifier = Modifier.padding(top = 6.dp, start = 4.dp)
+            )
+            Text(
+                "点卡片可补录，点卡片右上角 ✎ 可编辑或删除",
+                fontSize = 11.sp,
+                color = AppColors.Muted,
+                modifier = Modifier.padding(top = 2.dp, start = 4.dp, bottom = 2.dp)
+            )
+        }
     }
 }

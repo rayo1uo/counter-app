@@ -46,7 +46,10 @@ fun HistoryScreen(
     val entries = ui.entries.filter { entry ->
         entry.counterId in ids &&
             (ui.search.isBlank() || (names[entry.counterId]?.name ?: "").contains(ui.search, ignoreCase = true))
-    }.sortedByDescending { it.occurredAt }
+    }.sortedWith(
+        compareByDescending<EntryEntity> { it.occurredAt }
+            .thenByDescending { it.createdAt }
+    )
     val groups = entries.groupBy { it.localDate }.toList().sortedByDescending { it.first }
     val filterLabel = if (ui.filterCategory == "all") "全部" else ui.filterCategory
 
@@ -54,10 +57,9 @@ fun HistoryScreen(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(start = 18.dp, end = 18.dp, bottom = 130.dp)
+            .padding(start = 18.dp, end = 18.dp, bottom = 16.dp)
     ) {
         TopBar(
-            dark = dark,
             leading = {
                 CircleButton(onClick = onOpenCategories) {
                     Icon(Icons.Default.Menu, contentDescription = "分类", tint = textColor(dark))

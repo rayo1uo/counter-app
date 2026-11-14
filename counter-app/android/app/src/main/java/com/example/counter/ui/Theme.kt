@@ -5,7 +5,13 @@ import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+
+/** Secondary text must stay readable on both the warm light page and the dark page. */
+private val LocalMutedColor = staticCompositionLocalOf { Color(0xFF6E6E76) }
 
 object AppColors {
     val Orange = Color(0xFFF5921E)
@@ -20,7 +26,12 @@ object AppColors {
     val ChipDark = Color(0xFF343437)
     val TextLight = Color(0xFF1C1C1E)
     val TextDark = Color(0xFFF2F2F7)
-    val Muted = Color(0xFF8A8A8E)
+    val MutedLight = Color(0xFF6E6E76)
+    val MutedDark = Color(0xFFB9B9C4)
+    val Muted: Color
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalMutedColor.current
     val LineLight = Color(0xFFE5E5E0)
     val LineDark = Color(0xFF3D3D40)
     val Danger = Color(0xFFD6453D)
@@ -65,9 +76,13 @@ private val DarkScheme = darkColorScheme(
 
 @Composable
 fun CounterTheme(dark: Boolean, content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = if (dark) DarkScheme else LightScheme,
-        typography = Typography(),
-        content = content
-    )
+    CompositionLocalProvider(
+        LocalMutedColor provides if (dark) AppColors.MutedDark else AppColors.MutedLight
+    ) {
+        MaterialTheme(
+            colorScheme = if (dark) DarkScheme else LightScheme,
+            typography = Typography(),
+            content = content
+        )
+    }
 }

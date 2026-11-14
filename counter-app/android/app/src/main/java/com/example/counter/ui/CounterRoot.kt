@@ -5,6 +5,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
@@ -12,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -22,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.counter.domain.TimeUtils
 import java.nio.charset.StandardCharsets
 
@@ -29,6 +32,8 @@ private sealed class ScreenDialog {
     object None : ScreenDialog()
     object AddCounter : ScreenDialog()
     data class EditCounter(val id: String) : ScreenDialog()
+    data class ConfirmDeleteCounter(val id: String, val name: String) : ScreenDialog()
+    data class ConfirmDeleteCategory(val name: String) : ScreenDialog()
     data class QuickLog(val id: String) : ScreenDialog()
     data class EditEntry(val id: String) : ScreenDialog()
     object Settings : ScreenDialog()
@@ -99,34 +104,44 @@ fun CounterRoot(vm: CounterViewModel) {
     val exportJson = { jsonLauncher.launch("counter_backup_${TimeUtils.todayYmd()}.json") }
     val importJson = { importLauncher.launch(arrayOf("application/json", "text/plain", "*/*")) }
 
-    Box(modifier = Modifier.fillMaxSize().background(pageBackground(dark))) {
-        when (ui.tab) {
-            Tab.HOME -> HomeScreen(
-                vm = vm,
-                ui = ui,
-                onOpenMore = { dialog = ScreenDialog.More },
-                onOpenSettings = { dialog = ScreenDialog.Settings },
-                onOpenCategories = { dialog = ScreenDialog.Categories },
-                onAddCounter = { dialog = ScreenDialog.AddCounter },
-                onQuickLog = { dialog = ScreenDialog.QuickLog(it.id) }
-            )
+    BoxWithConstraints(
+        modifier = Modifier.fillMaxSize().background(pageBackground(dark))
+    ) {
+        // On wide screens the FAB can sit next to the tab capsule; on phones it stays above it.
+        val wide = maxWidth >= 600.dp
 
-            Tab.HISTORY -> HistoryScreen(
-                vm = vm,
-                ui = ui,
-                onOpenMore = { dialog = ScreenDialog.More },
-                onOpenCategories = { dialog = ScreenDialog.Categories },
-                onOpenDateJump = { dialog = ScreenDialog.DateJump },
-                onEditEntry = { dialog = ScreenDialog.EditEntry(it.id) }
-            )
+        // Reserve a real layout strip for the floating navigation instead of just padding
+        // the scrollable content (which only helps once the user scrolls to the very bottom).
+        Box(modifier = Modifier.fillMaxSize().padding(bottom = 86.dp)) {
+            when (ui.tab) {
+                Tab.HOME -> HomeScreen(
+                    vm = vm,
+                    ui = ui,
+                    onOpenMore = { dialog = ScreenDialog.More },
+                    onOpenSettings = { dialog = ScreenDialog.Settings },
+                    onOpenCategories = { dialog = ScreenDialog.Categories },
+                    onEditCounter = { dialog = ScreenDialog.EditCounter(it.id) },
+                    onQuickLog = { dialog = ScreenDialog.QuickLog(it.id) },
+                    inlineSummary = !wide
+                )
 
-            Tab.STATS -> StatsScreen(
-                vm = vm,
-                ui = ui,
-                onOpenMore = { dialog = ScreenDialog.More },
-                onOpenCategories = { dialog = ScreenDialog.Categories },
-                onPeriodPick = { dialog = ScreenDialog.PeriodPick }
-            )
+                Tab.HISTORY -> HistoryScreen(
+                    vm = vm,
+                    ui = ui,
+                    onOpenMore = { dialog = ScreenDialog.More },
+                    onOpenCategories = { dialog = ScreenDialog.Categories },
+                    onOpenDateJump = { dialog = ScreenDialog.DateJump },
+                    onEditEntry = { dialog = ScreenDialog.EditEntry(it.id) }
+                )
+
+                Tab.STATS -> StatsScreen(
+                    vm = vm,
+                    ui = ui,
+                    onOpenMore = { dialog = ScreenDialog.More },
+                    onOpenCategories = { dialog = ScreenDialog.Categories },
+                    onPeriodPick = { dialog = ScreenDialog.PeriodPick }
+                )
+            }
         }
 
         if (ui.tab == Tab.HOME) {
@@ -136,10 +151,23 @@ fun CounterRoot(vm: CounterViewModel) {
                 containerColor = cardBackground(dark),
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(end = 22.dp, bottom = 104.dp)
+                    .padding(end = 22.dp, bottom = if (wide) 22.dp else 104.dp)
             ) {
                 Icon(Icons.Default.Add, contentDescription = "新增计数器", tint = textColor(dark))
             }
+        }
+
+        // Wide screens have plenty of room beside the centred tab capsule, so pin the
+        // summary there instead of letting the scrollable card list push it off-screen.
+        if (ui.tab == Tab.HOME && wide) {
+            Text(
+                homeSummaryText(ui, vm.visibleCounters()) + "   ·   点卡片 ✎ 编辑/删除",
+                fontSize = 12.sp,
+                color = AppColors.Muted,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 22.dp, bottom = 42.dp)
+            )
         }
 
         Box(
@@ -172,10 +200,26 @@ fun CounterRoot(vm: CounterViewModel) {
                     dark = dark,
                     onDismiss = close,
                     onSave = { vm.saveCounter(it); close() },
-                    onDelete = { id -> vm.deleteCounter(id); close() }
+                    onDelete = {
+                        dialog = ScreenDialog.ConfirmDeleteCounter(counter.id, counter.name)
+                    }
                 )
             }
         }
+
+        is ScreenDialog.ConfirmDeleteCounter -> ConfirmActionDialog(
+            title = "删除计数器",
+            message = "「${current.name}」和它名下的全部历史记录都会被删除，且无法撤销。",
+            onDismiss = close,
+            onConfirm = { vm.deleteCounter(current.id); close() }
+        )
+
+        is ScreenDialog.ConfirmDeleteCategory -> ConfirmActionDialog(
+            title = "删除分类",
+            message = "删除分类「${current.name}」后，该分类下的计数器会移到「默认」分类。",
+            onDismiss = close,
+            onConfirm = { vm.deleteCategory(current.name); close() }
+        )
 
         is ScreenDialog.QuickLog -> {
             val counter = ui.counters.firstOrNull { it.id == current.id }
@@ -234,7 +278,8 @@ fun CounterRoot(vm: CounterViewModel) {
             current = ui.filterCategory,
             onDismiss = close,
             onPick = { vm.setFilter(it); close() },
-            onAdd = { vm.addCategory(it) }
+            onAdd = { vm.addCategory(it) },
+            onDelete = { dialog = ScreenDialog.ConfirmDeleteCategory(it) }
         )
 
         ScreenDialog.DateJump -> DateJumpDialog(

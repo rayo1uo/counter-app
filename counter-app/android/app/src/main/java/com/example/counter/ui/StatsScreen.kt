@@ -70,10 +70,9 @@ fun StatsScreen(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(start = 18.dp, end = 18.dp, bottom = 130.dp)
+            .padding(start = 18.dp, end = 18.dp, bottom = 16.dp)
     ) {
         TopBar(
-            dark = dark,
             leading = {
                 CircleButton(onClick = onOpenCategories) {
                     Icon(Icons.Default.Menu, contentDescription = "分类", tint = textColor(dark))
@@ -111,7 +110,7 @@ fun StatsScreen(
                 contentAlignment = Alignment.Center
             ) { Text("‹", fontSize = 19.sp, color = AppColors.Muted) }
             Text(
-                "${period.label}  ⌄",
+                period.label,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = textColor(dark),
