@@ -5,5 +5,3 @@ com.example.counter.UiAcceptanceTest:.
 Time: 4.216
 
 OK (12 tests)
-
-
