@@ -15,15 +15,17 @@ abstract class CounterDatabase : RoomDatabase() {
     abstract fun dao(): CounterDao
 
     companion object {
+        val MIGRATION_1_2 = object : androidx.room.migration.Migration(1, 2) {
+                override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE counters ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0")
+                }
+            }
+
         fun build(context: Context): CounterDatabase =
             Room.databaseBuilder(
                 context.applicationContext,
                 CounterDatabase::class.java,
                 "counter.db"
-            ).addMigrations(object : androidx.room.migration.Migration(1, 2) {
-                override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
-                    db.execSQL("ALTER TABLE counters ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0")
-                }
-            }).build()
+            ).addMigrations(MIGRATION_1_2).build()
     }
 }
