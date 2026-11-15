@@ -95,7 +95,7 @@ fun HistoryScreen(
         groups.forEach { (date, list) ->
             val localDate = TimeUtils.parse(date)
             val weekLabels = arrayOf("日", "一", "二", "三", "四", "五", "六")
-            Row(modifier = Modifier.fillMaxWidth().clickable { collapsed = if (date in collapsed) collapsed - date else collapsed + date }, verticalAlignment = Alignment.CenterVertically) {
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
                         .width(42.dp)
@@ -116,12 +116,17 @@ fun HistoryScreen(
                 }
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
-                    "周${weekLabels[localDate.dayOfWeek.value % 7]} · ${list.size} 条记录  ${if (date in collapsed) "展开" else "收起"}",
+                    "周${weekLabels[localDate.dayOfWeek.value % 7]} · ${list.size} 条记录",
                     fontSize = 14.sp,
-                    color = AppColors.Muted
+                    color = AppColors.Muted,
+                    modifier = Modifier.weight(1f)
                 )
+                androidx.compose.material3.TextButton(onClick = {
+                    collapsed = if (date in collapsed) collapsed - date else collapsed + date
+                }) { Text(if (date in collapsed) "展开记录" else "收起记录") }
             }
-
+            if (date in collapsed) Text("已收起 ${list.size} 条记录", color = AppColors.Muted,
+                modifier = Modifier.padding(start = 52.dp, bottom = 12.dp))
             Spacer(modifier = Modifier.height(12.dp))
 
             if (date !in collapsed) list.forEachIndexed { index, entry ->
@@ -142,8 +147,7 @@ fun HistoryScreen(
                                 "${gapMinutes / 60}时" + if (gapMinutes % 60 > 0) "${gapMinutes % 60}分" else ""
                             } else "${gapMinutes}分"
                             Text(gapText, fontSize = 10.sp, color = AppColors.Muted)
-                            RecordFilters(vm, ui)
-        Spacer(modifier = Modifier.height(14.dp))
+                            Spacer(modifier = Modifier.height(14.dp))
                         }
                         Text(
                             String.format("%02d:%02d", hour24, minute),
@@ -180,7 +184,7 @@ fun HistoryScreen(
                             .clickable { onEditEntry(entry) }
                             .padding(14.dp)
                     ) {
-                        Row(modifier = Modifier.fillMaxWidth().clickable { collapsed = if (date in collapsed) collapsed - date else collapsed + date }, verticalAlignment = Alignment.CenterVertically) {
+                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     names[entry.counterId]?.name ?: "已删除",

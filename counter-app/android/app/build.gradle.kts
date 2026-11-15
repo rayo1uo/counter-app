@@ -13,11 +13,17 @@ android {
         minSdk = 26
         targetSdk = 34
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 3
+        versionName = "1.2"
     }
 
+    testBuildType = "validation"
     buildTypes {
+        create("validation") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".validation"
+            matchingFallbacks += listOf("debug")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
@@ -72,15 +78,17 @@ dependencies {
     androidTestImplementation("androidx.test:runner:1.6.1")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+    add("validationImplementation", "androidx.compose.ui:ui-test-manifest")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
 // Include the instrumentation APK in the existing GitHub artifact without changing CI permissions.
 val collectAcceptanceApk by tasks.registering {
-    dependsOn("assembleDebugAndroidTest", "lintDebug")
+    dependsOn("assembleValidation", "assembleValidationAndroidTest", "lintDebug")
     doLast {
         copy {
-            from(layout.buildDirectory.dir("outputs/apk/androidTest/debug")) { include("*.apk") }
+            from(layout.buildDirectory.dir("outputs/apk/validation")) { include("*.apk") }
+            from(layout.buildDirectory.dir("outputs/apk/androidTest/validation")) { include("*.apk") }
             into(layout.buildDirectory.dir("outputs/apk/debug"))
         }
     }

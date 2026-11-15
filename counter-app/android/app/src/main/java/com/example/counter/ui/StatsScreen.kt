@@ -155,7 +155,7 @@ fun StatsScreen(
         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             SegmentControl(
                 items = listOf(
-                    StatView.CHART to "趋势 / 对比", StatView.PIE to "饼图", StatView.CALENDAR to "日历"
+                    StatView.CHART to "趋势 / 对比", StatView.PIE to "饼图", StatView.CALENDAR to "热力图"
                 ),
                 selected = ui.view,
                 dark = dark,
@@ -187,10 +187,10 @@ fun StatsScreen(
 
             StatView.CALENDAR -> {
                 StatCard(dark) {
-                    Text("日历分布", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = textColor(dark))
+                    Text("每日热力图", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = textColor(dark))
                     if (ui.dim == Dim.YEAR || ui.dim == Dim.ALL) {
                         Text(
-                            "下方显示所选周期末月的每日分布",
+                            "下方显示 ${period.calendarMonth.monthValue} 月的每日分布",
                             fontSize = 11.sp,
                             color = AppColors.Muted
                         )
