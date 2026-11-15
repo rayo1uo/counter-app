@@ -48,3 +48,5 @@
 ![宽屏双列](screenshots/home-wide.png)
 
 [设备测试原始输出](instrumentation.txt)
+
+后续 1.2 版本的热力图改版、历史点击修复及 14 项设备测试见 [热力图验收](heatmap.md)。
