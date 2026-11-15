@@ -19,7 +19,7 @@ class CountActionReceiver : BroadcastReceiver() {
                 if (app != null) {
                     val target = app.container.dao.allCounters()
                         .filter { !it.archived }
-                        .minByOrNull { it.sortOrder }
+                        .sortedWith(compareByDescending<com.example.counter.data.CounterEntity> { it.pinned }.thenBy { it.sortOrder }.thenBy { it.createdAt }).firstOrNull()
                     if (target != null) {
                         app.container.repository.addEntry(
                             target.id,

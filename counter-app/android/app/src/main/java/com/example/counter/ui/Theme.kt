@@ -59,7 +59,17 @@ fun chipColor(dark: Boolean): Color = if (dark) AppColors.ChipDark else AppColor
 fun lineColor(dark: Boolean): Color = if (dark) AppColors.LineDark else AppColors.LineLight
 
 private val LightScheme = lightColorScheme(
-    primary = AppColors.Orange,
+    inversePrimary = Color(0xFFFFB85C),
+    primary = AppColors.OrangeDark,
+    onPrimary = Color.White,
+    primaryContainer = AppColors.OrangeSoft,
+    onPrimaryContainer = Color(0xFF603600),
+    secondary = AppColors.OrangeDark,
+    secondaryContainer = AppColors.OrangeSoft,
+    onSecondaryContainer = Color(0xFF603600),
+    surfaceVariant = AppColors.ChipLight,
+    onSurfaceVariant = AppColors.MutedLight,
+    surfaceTint = AppColors.Orange,
     background = AppColors.PageLight,
     surface = AppColors.CardLight,
     onBackground = AppColors.TextLight,
@@ -67,7 +77,17 @@ private val LightScheme = lightColorScheme(
 )
 
 private val DarkScheme = darkColorScheme(
-    primary = AppColors.Orange,
+    inversePrimary = AppColors.OrangeDark,
+    primary = Color(0xFFFFB85C),
+    onPrimary = Color(0xFF482800),
+    primaryContainer = Color(0xFF583B1E),
+    onPrimaryContainer = AppColors.OrangeSoft,
+    secondary = Color(0xFFFFB85C),
+    secondaryContainer = Color(0xFF583B1E),
+    onSecondaryContainer = AppColors.OrangeSoft,
+    surfaceVariant = AppColors.ChipDark,
+    onSurfaceVariant = AppColors.MutedDark,
+    surfaceTint = AppColors.Orange,
     background = AppColors.PageDark,
     surface = AppColors.CardDark,
     onBackground = AppColors.TextDark,

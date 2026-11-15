@@ -14,13 +14,14 @@ object WidgetUpdater {
         val app = context.applicationContext as? CounterApp ?: return
         val entries = app.container.dao.allEntries()
         val today = TimeUtils.todayYmd()
-        val total = entries.filter { it.localDate == today }.sumOf { it.delta }
+        val target = app.container.dao.allCounters().filter { !it.archived }.sortedWith(compareByDescending<com.example.counter.data.CounterEntity> { it.pinned }.thenBy { it.sortOrder }.thenBy { it.createdAt }).firstOrNull()
+        val total = entries.filter { it.localDate == today && it.counterId == target?.id }.sumOf { it.delta }
         withContext(Dispatchers.Main) {
             val manager = AppWidgetManager.getInstance(context)
             val ids = manager.getAppWidgetIds(
                 ComponentName(context, CounterWidget::class.java)
             )
-            ids.forEach { id -> CounterWidget.render(context, manager, id, total) }
+            ids.forEach { id -> CounterWidget.render(context, manager, id, total, target?.name ?: "暂无计数器", target?.step ?: 1.0) }
         }
     }
 }

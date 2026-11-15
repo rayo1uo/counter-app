@@ -13,3 +13,6 @@ build/
 .gradle/
 *.apk
 *.log
+
+# 本地 APK 和模拟器验收产物
+/artifacts/

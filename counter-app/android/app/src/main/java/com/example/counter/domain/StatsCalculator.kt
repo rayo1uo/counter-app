@@ -42,7 +42,7 @@ object StatsCalculator {
         atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
     private fun dayBounds(date: LocalDate): Pair<Long, Long> =
-        date.atStartOfDay().millis() to date.atTime(23, 59, 59).millis()
+        date.atStartOfDay().millis() to date.atTime(23, 59, 59, 999_000_000).millis()
 
     fun buildPeriod(
         dim: Dim,
@@ -57,7 +57,7 @@ object StatsCalculator {
                 val (start, end) = dayBounds(anchor)
                 val buckets = (0..23).map { hour ->
                     val from = anchor.atTime(hour, 0)
-                    val to = if (hour == 23) anchor.atTime(23, 59, 59)
+                    val to = if (hour == 23) anchor.atTime(23, 59, 59, 999_000_000)
                     else anchor.atTime(hour + 1, 0).minusNanos(1)
                     Bucket(from.millis(), to.millis(), hour % 6 == 0, hour.toString())
                 }
@@ -94,11 +94,11 @@ object StatsCalculator {
                 val buckets = (1..12).map { m ->
                     val ym = YearMonth.of(year, m)
                     val from = ym.atDay(1).atStartOfDay().millis()
-                    val to = ym.atEndOfMonth().atTime(23, 59, 59).millis()
+                    val to = ym.atEndOfMonth().atTime(23, 59, 59, 999_000_000).millis()
                     Bucket(from, to, m % 2 == 1, m.toString())
                 }
                 val start = LocalDate.of(year, 1, 1).atStartOfDay().millis()
-                val end = LocalDate.of(year, 12, 31).atTime(23, 59, 59).millis()
+                val end = LocalDate.of(year, 12, 31).atTime(23, 59, 59, 999_000_000).millis()
                 Period(start, end, "${year}年", buckets, month)
             }
 
@@ -107,11 +107,11 @@ object StatsCalculator {
                 val hi = maxOf(earliestYear, latestYear, anchor.year)
                 val buckets = (lo..hi).map { year ->
                     val from = LocalDate.of(year, 1, 1).atStartOfDay().millis()
-                    val to = LocalDate.of(year, 12, 31).atTime(23, 59, 59).millis()
+                    val to = LocalDate.of(year, 12, 31).atTime(23, 59, 59, 999_000_000).millis()
                     Bucket(from, to, true, year.toString())
                 }
                 val start = LocalDate.of(lo, 1, 1).atStartOfDay().millis()
-                val end = LocalDate.of(hi, 12, 31).atTime(23, 59, 59).millis()
+                val end = LocalDate.of(hi, 12, 31).atTime(23, 59, 59, 999_000_000).millis()
                 Period(start, end, "$lo - $hi", buckets, month)
             }
         }

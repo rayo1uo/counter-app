@@ -37,9 +37,11 @@ class CounterWidget : AppWidgetProvider() {
             context: Context,
             manager: AppWidgetManager,
             widgetId: Int,
-            todayTotal: Double
+            todayTotal: Double, name: String = "计数器", step: Double = 1.0
         ) {
             val views = RemoteViews(context.packageName, R.layout.widget_counter)
+            views.setTextViewText(R.id.widget_label, "$name · 今日")
+            views.setTextViewText(R.id.widget_add, "+${formatNumber(step)}")
             views.setTextViewText(R.id.widget_value, formatNumber(todayTotal))
 
             val intent = Intent(context, CountActionReceiver::class.java).apply {

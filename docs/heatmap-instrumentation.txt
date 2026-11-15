@@ -1,0 +1,12 @@
+Performing Streamed Install
+Success
+Performing Streamed Install
+Success
+
+com.example.counter.CounterAcceptanceTest:...........
+com.example.counter.HeatmapTest:..
+com.example.counter.UiAcceptanceTest:.
+
+Time: 3.945
+
+OK (14 tests)

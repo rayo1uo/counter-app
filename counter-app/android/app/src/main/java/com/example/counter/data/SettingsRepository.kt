@@ -17,6 +17,8 @@ private val Context.counterDataStore: DataStore<Preferences> by preferencesDataS
 enum class CountMode { DAILY, TOTAL }
 
 data class AppSettings(
+    val compact: Boolean = true,
+    val confirmCount: Boolean = false,
     val darkTheme: Boolean = false,
     val sound: Boolean = true,
     val haptic: Boolean = true,
@@ -32,6 +34,8 @@ data class AppSettings(
 class SettingsRepository(private val context: Context) {
 
     private object Keys {
+        val COMPACT = booleanPreferencesKey("compact")
+        val CONFIRM = booleanPreferencesKey("confirm_count")
         val DARK = booleanPreferencesKey("dark")
         val SOUND = booleanPreferencesKey("sound")
         val HAPTIC = booleanPreferencesKey("haptic")
@@ -46,6 +50,8 @@ class SettingsRepository(private val context: Context) {
 
     val settings: Flow<AppSettings> = context.counterDataStore.data.map { p ->
         AppSettings(
+            compact = p[Keys.COMPACT] ?: true,
+            confirmCount = p[Keys.CONFIRM] ?: false,
             darkTheme = p[Keys.DARK] ?: false,
             sound = p[Keys.SOUND] ?: true,
             haptic = p[Keys.HAPTIC] ?: true,
@@ -58,6 +64,18 @@ class SettingsRepository(private val context: Context) {
             volumeCounterId = p[Keys.VOLUME_ID] ?: ""
         )
     }
+
+    suspend fun restore(s: AppSettings) {
+        context.counterDataStore.edit {
+            it[Keys.DARK]=s.darkTheme; it[Keys.COMPACT]=s.compact; it[Keys.CONFIRM]=s.confirmCount
+            it[Keys.SOUND]=s.sound; it[Keys.HAPTIC]=s.haptic; it[Keys.WEEK_MONDAY]=s.weekStartMonday
+            it[Keys.MODE]=if (s.countMode == CountMode.TOTAL) "total" else "daily"
+            it[Keys.REMINDER_ON]=s.reminderEnabled; it[Keys.REMINDER_HOUR]=s.reminderHour; it[Keys.REMINDER_MINUTE]=s.reminderMinute
+            it[Keys.VOLUME_ON]=s.volumeCountEnabled; it[Keys.VOLUME_ID]=s.volumeCounterId
+        }
+    }
+    suspend fun setCompact(value: Boolean) { context.counterDataStore.edit { it[Keys.COMPACT] = value } }
+    suspend fun setConfirmCount(value: Boolean) { context.counterDataStore.edit { it[Keys.CONFIRM] = value } }
 
     suspend fun setDark(value: Boolean) {
         context.counterDataStore.edit { it[Keys.DARK] = value }

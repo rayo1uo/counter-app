@@ -32,6 +32,15 @@ class MainActivity : ComponentActivity() {
         }
         setContent {
             val ui by vm.ui.collectAsState()
+            androidx.compose.runtime.SideEffect {
+                val background = if (ui.settings.darkTheme) 0xFF1B1B1D.toInt() else 0xFFF5F5F2.toInt()
+                window.statusBarColor = background
+                window.navigationBarColor = background
+                androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).apply {
+                    isAppearanceLightStatusBars = !ui.settings.darkTheme
+                    isAppearanceLightNavigationBars = !ui.settings.darkTheme
+                }
+            }
             CounterTheme(dark = ui.settings.darkTheme) {
                 CounterRoot(vm = vm)
             }

@@ -17,6 +17,7 @@ data class CounterEntity(
     val category: String = "默认",
     val sortOrder: Int = 0,
     val archived: Boolean = false,
+    @androidx.room.ColumnInfo(defaultValue = "0") val pinned: Boolean = false,
     val createdAt: Long = 0L
 )
 
